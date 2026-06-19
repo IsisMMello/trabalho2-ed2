@@ -94,3 +94,5 @@ funcionario*criarPessoa(char* nome, int dia, int mes, int ano, char* filiacao, c
     novaPessoa->contato.telefone = telefone;
     return novaPessoa;
 }
+
+//sdfsdfsdf
