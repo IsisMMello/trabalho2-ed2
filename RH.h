@@ -63,34 +63,38 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct funcionario {
-    char* nome;
-    dataNascimento dataNasc;
-    char* filiacao;
+    chaveComposta chave;
+    char mae[100];
+    char pai[100];
     dadosContato contato;
     float historicoPagamentos[12];
+    dadosContratuais contrato;
 } funcionario;
 
-typedef struct dataNascimento {
+
+typedef struct data {
     int dia;
     int mes;
     int ano;
-} dataNascimento;
+} data;
 
 typedef struct dadosContato {
-    char* endereco;
-    char* telefone;
+    char endereco[200];
+    char telefone[20];
 } dadosContato;
 
-funcionario*criarPessoa(char* nome, int dia, int mes, int ano, char* filiacao, char* endereco, char* telefone) {
-    funcionario* novaPessoa = (funcionario*)malloc(sizeof(funcionario));
-    novaPessoa->nome = nome;
-    novaPessoa->dataNasc.dia = dia;
-    novaPessoa->dataNasc.mes = mes;
-    novaPessoa->dataNasc.ano = ano;
-    novaPessoa->filiacao = filiacao;
-    novaPessoa->contato.endereco = endereco;
-    novaPessoa->contato.telefone = telefone;
-    return novaPessoa;
-}
+
+typedef struct dadosContratuais{
+    data dataContrato;
+    bool status;
+    data dataDesligamento;
+
+}dadosContratuais;
+
+typedef struct chaveComposta{
+    char nome[100];
+    data dataNascimento;
+}chaveComposta;

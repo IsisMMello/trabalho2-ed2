@@ -1,3 +1,9 @@
+#include <RH.h>
+#include<Bplus.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 /*
  * ============================================================
  * ARQUIVO: rh_system.c
@@ -18,6 +24,7 @@
  * 
  * ------------------------------------------------------------
  * PASSO 2 – FUNÇÃO DE INSERIR FUNCIONÁRIO (FLUXO COMPLETO)
+ 
  * ------------------------------------------------------------
  * 2.1. Solicitar Nome e Data Nascimento.
  * 2.2. Buscar na árvore se a chave composta já existe.
@@ -60,3 +67,83 @@
  * 6.4. imprimir_historico_pagamentos(Pagamento* hist[12]).
  * 6.5. serializar_funcionario() e desserializar_funcionario() para arquivo de dados.
  */
+
+//cria pessoa
+funcionario* criarPessoa(char* nome, int dia, int mes, int ano, char* mae, char* pai ,char*endereco, char* telefone) {
+    funcionario* novaPessoa = (funcionario*)malloc(sizeof(funcionario));
+    if (novaPessoa == NULL) {
+        return NULL;
+    }
+    
+    // nome e data
+    strcpy(novaPessoa->chave.nome, nome);
+    novaPessoa->chave.dataNascimento.dia = dia;
+    novaPessoa->chave.dataNascimento.mes = mes;
+    novaPessoa->chave.dataNascimento.ano = ano;
+    
+    // mae pai
+    strcpy(novaPessoa->mae, mae);
+    strcpy(novaPessoa->pai, pai);
+    
+    // contato
+    strcpy(novaPessoa->contato.endereco, endereco);
+    strcpy(novaPessoa->contato.telefone, telefone);
+    
+    // inicializa contrato
+    novaPessoa->contrato.dataContrato.dia = 0;
+    novaPessoa->contrato.dataContrato.mes = 0;
+    novaPessoa->contrato.dataContrato.ano = 0;
+    novaPessoa->contrato.status = false;
+    novaPessoa->contrato.dataDesligamento.dia = 0;
+    novaPessoa->contrato.dataDesligamento.mes = 0;
+    novaPessoa->contrato.dataDesligamento.ano = 0;
+    
+    
+    return novaPessoa;
+}
+
+//calbacks
+int comparar_chave(const void*a, const void*b){
+    chaveComposta *chave1 = (chaveComposta *)a;
+    chaveComposta *chave2 = (chaveComposta *)b;
+
+    int compararNome = strcmp(chave1->nome,chave2->nome);
+    if (compararNome != 0) return compararNome;
+
+
+    if (chave1->dataNascimento.ano != chave2->dataNascimento.ano) {
+        return (chave1->dataNascimento.ano < chave2->dataNascimento.ano) ? -1 : 1;
+    }
+    if (chave1->dataNascimento.mes != chave2->dataNascimento.mes) {
+        return (chave1->dataNascimento.mes < chave2->dataNascimento.mes) ? -1 : 1;
+    }
+    if (chave1->dataNascimento.dia != chave2->dataNascimento.dia) {
+        return (chave1->dataNascimento.dia < chave2->dataNascimento.dia) ? -1 : 1;
+    }
+    return 0; //data igual
+
+}
+
+//callback 
+size_t tamanho_chave(const void* chave) {
+    return sizeof(chaveComposta);
+}
+
+void escrever_chave(const void* chave, const void* buffer) {
+    memcpy(buffer, chave, sizeof(chaveComposta));
+}
+
+void ler_chave(void* destino, const void* buffer) {
+    memcpy(destino, buffer, sizeof(chaveComposta));
+}
+
+//serializacao funcionario
+
+void serializar_funcionario(const funcionario* f, void* buffer) {
+    memcpy(buffer, f, sizeof(funcionario));
+}
+
+//desserializacao funcionario
+void desserializar_funcionario(funcionario* f, const void* buffer) {
+    memcpy(f, buffer, sizeof(funcionario));
+}

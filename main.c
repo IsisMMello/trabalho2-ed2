@@ -44,3 +44,61 @@
  * 5.2. Limpar buffer do teclado após leituras.
  * 5.3. Capturar interrupções (SIGINT) para não corromper arquivos.
  */
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(){
+
+    int opcao;
+    do{
+        printf("\n========================================\n");
+        printf("  MENU PRINCIPAL\n");
+        printf("========================================\n");
+        printf("  1 - Inserir Funcionario\n");
+        printf("  2 - Buscar Funcionario\n");
+        printf("  3 - Excluir Funcionario\n");
+        printf("  4 - Listar por Intervalo\n");
+        printf("  5 - Exibir Estrutura do Ìndice\n");
+        printf("  6 - sair\n");
+        printf("========================================\n");
+        
+        printf("\nEscolha uma opcao: ");
+        scanf("%d", &opcao);
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
+
+
+        switch (opcao)
+        {
+            case 1:
+            
+                break;
+            
+            case 2:
+            
+                break;
+            case 3:
+            
+                break;
+            case 4:
+            
+                break;
+            case 5:
+            
+                break;
+
+            case 6:
+            return false;
+            
+            default:
+                print("Opção indisponivel\n");
+
+        }
+    }while(true);
+
+
+
+    return 0;
+}
