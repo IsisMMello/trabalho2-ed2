@@ -101,14 +101,13 @@ FILE* criarArvore(const char *nomeArquivo, int tamChave, int tamDado) {
     fwrite(&cabecalho, sizeof(CabecalhoArquivo), 1, arquivo);
 
     // 2. Cria a Raiz Inicial (que nasce como uma folha vazia)
-    noBPlus raiz;
+    pagina raiz;
     raiz.ehfolha = 1;       // Toda árvore B+ começa com uma raiz que é folha
     raiz.numChaves = 0;
     raiz.proximaFolha = -1;   // Não tem próxima folha ainda
 
     // Grava a raiz na posição indicada por cabecalho.raiz_rid
 
-    // NÃO ENTENDI ESSA PARTE 
     fseek(arquivo, cabecalho.raiz_rid, SEEK_SET);
     fwrite(&raiz, TAMANHO_PAGINA, 1, arquivo);
 
@@ -116,7 +115,7 @@ FILE* criarArvore(const char *nomeArquivo, int tamChave, int tamDado) {
     return arquivo;
 }
 
-int escreverPagina(FILE *arquivo, long rid, const noBPlus *no) {
+int escreverPagina(FILE *arquivo, long rid, const pagina *no) {
     if (arquivo == NULL || no == NULL || rid < 0) {
         fprintf(stderr, "[Erro - Disco] Parâmetros inválidos para escrita.\n");
         return 0;
@@ -128,7 +127,8 @@ int escreverPagina(FILE *arquivo, long rid, const noBPlus *no) {
         return 0;
     }
 
-    // 2. Grava o nó inteiro. Para garantir que o arquivo fique perfeitamente 
+
+    // Grava o nó inteiro. Para garantir que o arquivo fique perfeitamente 
     // alinhado em blocos de 4KB, forçamos a gravação de TAMANHO_PAGINA (4096 bytes)
     size_t itens_gravados = fwrite(no, TAMANHO_PAGINA, 1, arquivo);
     
@@ -142,7 +142,7 @@ int escreverPagina(FILE *arquivo, long rid, const noBPlus *no) {
     return 1;
 }
 
-int lerPagina(FILE *arquivo, long rid, noBPlus *buffer_no) {
+int lerPagina(FILE *arquivo, long rid, pagina *buffer_no) {
     if (arquivo == NULL || buffer_no == NULL || rid < 0) {
         fprintf(stderr, "[Erro - Disco] Parâmetros inválidos para leitura.\n");
         return 0;

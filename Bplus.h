@@ -63,18 +63,19 @@
 #define ORDEM 255
 #define TAMANHO_PAGINA 4096
 #include <stdbool.h>
+#include "Rh.h"
 
 
 // rid funciona como um ponteiro de memoria em disco, se um dado esta armazenado no bite n do arquivo, o rid é n
 // Se o dado não existe, o rid é -1
-typedef struct noBPlus {
+typedef struct pagina {
     bool ehfolha;
     int numChaves;
-    char chaves[ORDEM - 1];
+    funcionario chaves[ORDEM - 1];
     long rids[ORDEM]; // RIDs dos filhos 
     long proximaFolha;   // Apenas para folhas: Tem que ser long e não void* para armazenar o RID do próximo nó folha
     int foiDeletado;
-} noBPlus;
+} pagina;
 
 typedef struct {
     long raiz_rid;          // Onde a raiz da árvore está no arquivo (RID)
@@ -87,5 +88,5 @@ typedef struct {
 } CabecalhoArquivo;
 
 void criaArvoreBMais(char* nomeArquivo, size_t tamanhoChave, size_t tamanhoDado);
-int lerPagina(FILE* arquivo, long rid, noBPlus *buffer_no);
-int escreverPagina(FILE* arquivo, long rid, const noBPlus *no);
+int lerPagina(FILE* arquivo, long rid, pagina *buffer_no);
+int escreverPagina(FILE* arquivo, long rid, const pagina *no);
