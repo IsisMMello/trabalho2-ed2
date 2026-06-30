@@ -8,7 +8,7 @@ typedef struct {
 } Cabecalho;
 
 typedef struct Pagina{
-    unsigned char chave[ORDEM + 1][100];
+    void* chave[ORDEM + 1];
     int filho[ORDEM + 2];
     int pai; //pai do vetor de Chave
     int indice; //endereço da página

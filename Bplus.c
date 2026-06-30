@@ -36,7 +36,6 @@ void destroiPagina(Pagina *p){
     }
 }
 
-
 void inserirElemento(Pagina *p, const void* chave, int indice){
     
     if (p->ehfolha == 0){
@@ -435,6 +434,7 @@ void inicializarArvore(char* nomeArquivo, int ordem, int tamChave){
     fclose(arquivoArvore);
 
 }
+
 void imprimirArvore();
 
 Pagina buscarFolha(FILE *arquivo, Cabecalho *header, const void *chave, int (*comparar)(const void *, const void *)){
