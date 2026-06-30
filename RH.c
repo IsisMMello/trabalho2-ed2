@@ -80,7 +80,8 @@ int salvar_funcionario(const funcionario *f, int *posicao)
             return 0;
 
         fseek(arquivo, 0, SEEK_END);
-        *posicao = ftell(arquivo);
+        long tamanho = ftell(arquivo);
+        *posicao = tamanho / sizeof(funcionario);
     }
     else {
         arquivo = fopen("funcionarios.dat", "rb+");
@@ -88,7 +89,7 @@ int salvar_funcionario(const funcionario *f, int *posicao)
         if (arquivo == NULL)
             return 0;
 
-        fseek(arquivo, *posicao, SEEK_SET);
+        fseek(arquivo, (*posicao) * sizeof(funcionario), SEEK_SET);
     }
 
     int ok = fwrite(f, sizeof(funcionario), 1, arquivo);
@@ -106,7 +107,7 @@ int carregar_funcionario(funcionario* f, int posicao) {
         return 0;
     }
     
-    fseek(arquivo, posicao, SEEK_SET);
+    fseek(arquivo, posicao * sizeof(funcionario), SEEK_SET);
     size_t lido = fread(f, sizeof(funcionario), 1, arquivo);
     fclose(arquivo);
     

@@ -1,6 +1,7 @@
 #include "Bplus.h"
 #include <stdio.h>
 #include <stdlib.h>
+static const char *arquivoArvore = "arvore.dat";
 
 // funcões para a página
 Pagina *criaPagina(){
@@ -81,40 +82,41 @@ void inserirElemento(Pagina *p, const void* chave, int indice){
     }
 }
 
-void removerElemento(Pagina *p, const void *chave, int (*comparar)(const void*, const void*)){
+int removerElemento(Pagina *p, const void *chave, int (*comparar)(const void *, const void *)){
     int pos = -1;
 
     // procura a chave na página
-    for(int i = 0; i < p->qtElementos; i++){
-        if(comparar(chave, p->chave[i]) == 0){
+    for (int i = 0; i < p->qtElementos; i++) {
+        if (comparar(chave, p->chave[i]) == 0) {
             pos = i;
             break;
         }
     }
 
-    // chave não encontrada, retorna
-    if(pos == -1){
-        return;
-    }
+    // chave não encontrada
+    if (pos == -1)
+        return 0;
 
-    //Se encontrada, desloca elementos para esquerda
-    for(int i = pos; i < p->qtElementos - 1; i++){
+    // desloca elementos para a esquerda
+    for (int i = pos; i < p->qtElementos - 1; i++) {
         memcpy(p->chave[i],
-               p->chave[i+1],
+               p->chave[i + 1],
                sizeof(p->chave[i]));
 
-        p->filho[i] = p->filho[i+1];
+        p->filho[i] = p->filho[i + 1];
     }
 
-    // limpa a última posição do vetor
-    memset(&p->chave[p->qtElementos-1],
+    // limpa última posição
+    memset(&p->chave[p->qtElementos - 1],
            0,
-           sizeof(p->chave[p->qtElementos-1]));
+           sizeof(p->chave[p->qtElementos - 1]));
 
+    p->filho[p->qtElementos - 1] = -1;
     p->qtElementos--;
+    return 1;
 }
 
-void verificarOverflow(FILE *arquivo, Pagina *p) {
+void verificarOverflow(Pagina *p) {
     if (p->qtElementos <= ORDEM) 
         return;
 
@@ -226,7 +228,8 @@ void verificarOverflow(FILE *arquivo, Pagina *p) {
     destroiPagina(novaPagina);
 }
 
-void verificarUnderflow(FILE *arquivo, Pagina *pagina){
+void verificarUnderflow(Pagina *pagina){
+    FILE *arquivo = fopen(arquivoArvore, "rb");
     Cabecalho header;
 
     // lê cabeçalho
@@ -388,8 +391,9 @@ void ordenarPaginaFolha(Pagina *p){
 }
 
 int buscarPaginaLivre(){
+
     //abre o arquivo pra leitura
-    FILE *arquivo = fopen(arquivoArvore, "rb+");
+    FILE *arquivo = fopen(arquivoArvore, "rb");
     if (arquivo == NULL){
         printf("Erro ao abrir o arquivo!\n");
         return;
@@ -411,9 +415,9 @@ int buscarPaginaLivre(){
 }
 
 // funcões para a árvore
-void inicializarArvore(char* nomeArquivo, int ordem, int tamChave){
+void inicializarArvore(int ordem, int tamChave){
     
-    FILE *arquivoArvore = fopen(ARQUIVO_ARVORE, "rb");
+    FILE *arquivo = fopen(arquivoArvore, "rb+");
     // Confere se arquivo  da árvore já não foi criado
     if (arquivoArvore == NULL)
     {
@@ -424,7 +428,7 @@ void inicializarArvore(char* nomeArquivo, int ordem, int tamChave){
         arvore.ordem = ordem; // podemos tirar isso e usar do define
         arvore.qtdPaginas = 0;
 
-        arquivoArvore = fopen(ARQUIVO_ARVORE, "wb+");
+        FILE *arquivo = fopen(arquivoArvore, "wb+");
         fwrite(&arvore, sizeof(Cabecalho), 1, arquivoArvore);
     }
 
@@ -437,8 +441,9 @@ void inicializarArvore(char* nomeArquivo, int ordem, int tamChave){
 
 void imprimirArvore();
 
-Pagina buscarFolha(FILE *arquivo, Cabecalho *header, const void *chave, int (*comparar)(const void *, const void *)){
-    
+Pagina buscarFolha(Cabecalho *header, const void *chave, int (*comparar)(const void *, const void *)){
+
+    FILE *arquivo = fopen(arquivoArvore, "rb");
     Pagina pagina;
 
     //Carrega a raiz
@@ -484,7 +489,7 @@ int buscarChaveNaArvore(const void* chave, int *enderecoRegistro, int (*comparar
     }
 
     // busca a folha
-    Pagina p = buscarFolha(arquivo, &header, chave, comparar);
+    Pagina p = buscarFolha(&header, chave, comparar);
 
     // procura a chave na folha
     for (int i = 0; i < p.qtElementos; i++){
@@ -527,7 +532,7 @@ int* buscarChavesIntervalo(const void *chaveMin, const void *chaveMax, int *qtEn
     }
 
     //Encontra a folha onde chaveMin estaria
-    Pagina pagina = buscarFolha(arquivo, &header, chaveMin, comparar);
+    Pagina pagina = buscarFolha(&header, chaveMin, comparar);
 
     //aloca vetor com um tamanho inicial, se precisar de mais realloca
     int capacidade = 10;
@@ -616,7 +621,7 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamanh
     }
 
     //encontra a folha
-    Pagina pagina = buscarFolha(arquivo, &header, chave, comparar);
+    Pagina pagina = buscarFolha(&header, chave, comparar);
 
     //insere na folha
     inserirElemento(&pagina, chave);
@@ -653,29 +658,20 @@ void deletarChaveNaArvore(const void *chave, int (*comparar)(const void *, const
     }
 
     // encontra a folha
-    Pagina pagina = buscarFolha(arquivo, &header, chave, comparar);
+    Pagina pagina = buscarFolha(&header, chave, comparar);
 
-    int encontrou = 0;
-
-    for (int i = 0; i < pagina.qtElementos; i++){
-        if (comparar(chave, pagina.chave[i]) == 0){
-            encontrou = 1;
-            break;
-        }
-    }
-
-    if (!encontrou){
+    // tenta remover
+    if (!removerElemento(&pagina, chave, comparar)) {
         printf("Chave não encontrada.\n");
         fclose(arquivo);
         return;
     }
 
-    removerElemento(&pagina, chave);
-    verificarUnderflow(arquivo, &pagina);
+    verificarUnderflow(&pagina);
 
     fseek(arquivo, sizeof(Cabecalho) + pagina.indice * sizeof(Pagina), SEEK_SET);
-
     fwrite(&pagina, sizeof(Pagina), 1, arquivo);
+
     fclose(arquivo);
 }
 

@@ -24,14 +24,14 @@ Pagina *criaPagina(); // eduardo
 void inicializarPagina(Pagina *pagina, int indice, int tipo); // eduardo
 void destroiPagina(Pagina *p); // eduardo
 void inserirElemento(Pagina *p, const void *chave, int indice); // eduardo
-void removerElemento(Pagina *p, const void *chave, int (*comparar)(const void*, const void*));
-void verificarOverflow(FILE *arquivo, Pagina *p); // eduardo
-void verificarUnderflow(FILE *arquivo, Pagina *pagina);
+int removerElemento(Pagina *p, const void *chave, int (*comparar)(const void *, const void *));
+void verificarOverflow(Pagina *p); // eduardo
+void verificarUnderflow(Pagina *pagina);
 void ordenarPaginaFolha(Pagina *p); // eduardo
 int buscarPaginaLivre();
 
 // funções para a árvore
-void inicializarArvore(char* nomeArquivo, int ordem, int tamChave, int (*comparar)(const void*, const void*));
+void inicializarArvore(int ordem, int tamChave, int (*comparar)(const void*, const void*));
 void imprimirArvore();
 int buscarChave(const void *chave, int (*comparar)(const void*, const void*));
 void inserirChave(const void *chave, int resgistro);
