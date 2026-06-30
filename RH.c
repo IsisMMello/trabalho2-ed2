@@ -273,8 +273,6 @@ void rh_inserir_funcionario() {
                     getchar();
                 }
 
-                FILE *arquivo = fopen("funcionarios.dat", "rb+");
-
                 if (salvar_funcionario(&f, &posicao))
                     printf("\nFuncionario atualizado com sucesso!\n");
                 else
@@ -368,7 +366,7 @@ void rh_excluir_funcionario() {
     nome[strcspn(nome, "\n")] = '\0';
 
 
-    qtd = bplus_buscar_por_nome(nome, posicoes, 100);
+    qtd = buscarPorNome(nome, posicoes, 100);
 
     if (qtd == 0) {
         printf("Nenhum funcionario encontrado com esse nome.\n");
@@ -417,14 +415,11 @@ void rh_excluir_funcionario() {
     // Remove do índice
     chaveComposta chave = f.chave;
 
-    /* remove do índice */
-    deletarChaveNaArvore(&chave, comparar_chave);
-
-    /* marca como inativo */
     f.contrato.status = 0;
 
-    /* salva novamente no mesmo endereço */
     salvar_funcionario(&f, &posicoes[idx]);
+
+    deletarChaveNaArvore(&f.chave, comparar_chave);
 
     printf("Funcionario removido com sucesso.\n");
 }
