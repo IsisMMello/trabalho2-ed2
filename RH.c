@@ -6,43 +6,44 @@
 
 
 
-//cria pessoa
-funcionario* criarPessoa(char* nome, int dia, int mes, int ano, char* mae, char* pai ,char*endereco, char* telefone) {
-    funcionario* novaPessoa = (funcionario*)malloc(sizeof(funcionario));
-    if (novaPessoa == NULL) {
+//inicializa o funcionario
+funcionario* criar_funcionario(char* nome, int dia, int mes, int ano, char* mae, char* pai ,char*endereco, char* telefone) {
+
+    funcionario* novo = (funcionario*)malloc(sizeof(funcionario));
+    if (novo == NULL) {
         return NULL;
     }
     
     // nome e data
-    strcpy(novaPessoa->chave.nome, nome);
-    novaPessoa->chave.dataNascimento.dia = dia;
-    novaPessoa->chave.dataNascimento.mes = mes;
-    novaPessoa->chave.dataNascimento.ano = ano;
+    strcpy(novo->chave.nome, nome);
+    novo->chave.dataNascimento.dia = dia;
+    novo->chave.dataNascimento.mes = mes;
+    novo->chave.dataNascimento.ano = ano;
     
     // mae pai
-    strcpy(novaPessoa->filiacao.mae, mae);
-    strcpy(novaPessoa->filiacao.pai, pai);
+    strcpy(novo->filiacao.mae, mae);
+    strcpy(novo->filiacao.pai, pai);
     
     // contato
-    strcpy(novaPessoa->contato.endereco, endereco);
-    strcpy(novaPessoa->contato.telefone, telefone);
+    strcpy(novo->contato.endereco, endereco);
+    strcpy(novo->contato.telefone, telefone);
     
     // inicializa contrato
-    novaPessoa->contrato.dataContrato.dia = 0;
-    novaPessoa->contrato.dataContrato.mes = 0;
-    novaPessoa->contrato.dataContrato.ano = 0;
-    novaPessoa->contrato.status = 0;
-    novaPessoa->contrato.dataDesligamento.dia = 0;
-    novaPessoa->contrato.dataDesligamento.mes = 0;
-    novaPessoa->contrato.dataDesligamento.ano = 0;
+    novo->contrato.dataContrato.dia = 0;
+    novo->contrato.dataContrato.mes = 0;
+    novo->contrato.dataContrato.ano = 0;
+    novo->contrato.status = 0;
+    novo->contrato.dataDesligamento.dia = 0;
+    novo->contrato.dataDesligamento.mes = 0;
+    novo->contrato.dataDesligamento.ano = 0;
 
     //zera os pagamentos;
     for (int i = 0; i < 12; i++) {
-        novaPessoa->historicoPagamentos[i] = 0.0;
+        novo->historicoPagamentos[i] = 0.0;
     }
 
     
-    return novaPessoa;
+    return novo;
 }
 
 //calbacks
@@ -67,18 +68,18 @@ int comparar_chave(const void*a, const void*b){
 
 }
 
-//callback 
-size_t tamanho_chave(const void* chave) {
-    return sizeof(chaveComposta);
-}
+// //callback 
+// size_t tamanho_chave(const void* chave) {
+//     return sizeof(chaveComposta);
+// }
 
-void escrever_chave(const void* chave, void* buffer) {
-    memcpy(buffer, chave, sizeof(chaveComposta));
-}
+// void escrever_chave(const void* chave, void* buffer) {
+//     memcpy(buffer, chave, sizeof(chaveComposta));
+// }
 
-void ler_chave(void* destino, const void* buffer) {
-    memcpy(destino, buffer, sizeof(chaveComposta));
-}
+// void ler_chave(void* destino, const void* buffer) {
+//     memcpy(destino, buffer, sizeof(chaveComposta));
+// }
 
 //precisa??
 // //serializacao funcionario
@@ -97,26 +98,39 @@ void ler_chave(void* destino, const void* buffer) {
 
 
 
-int salvar_funcionario(const funcionario* f, long* posicao) {
-    FILE* arquivo = fopen("funcionarios.dat", "a+b");
-    if (arquivo == NULL) {
-        printf("Erro ao criar arquivo.\n");
-        return 0;
+int salvar_funcionario(const funcionario *f, int *posicao)
+{
+    FILE *arquivo;
+
+    if (*posicao == -1) {
+
+        arquivo = fopen("funcionarios.dat", "a+b");
+
+        if (arquivo == NULL)
+            return 0;
+
+        fseek(arquivo, 0, SEEK_END);
+        *posicao = ftell(arquivo);
+    }
+    else {
+        arquivo = fopen("funcionarios.dat", "rb+");
+
+        if (arquivo == NULL)
+            return 0;
+
+        fseek(arquivo, *posicao, SEEK_SET);
     }
 
-    
-    fseek(arquivo, 0, SEEK_END);
-    *posicao = ftell(arquivo);
-    
-    size_t escrito = fwrite(f, sizeof(funcionario), 1, arquivo);
+    int ok = fwrite(f, sizeof(funcionario), 1, arquivo);
+
     fclose(arquivo);
-    
-    return (escrito == 1);
+
+    return ok == 1;
 }
 
 //manda o arquivo para a memoria
 
-int carregar_funcionario(funcionario* f, long posicao) {
+int carregar_funcionario(funcionario* f, int posicao) {
     FILE* arquivo = fopen("funcionarios.dat", "rb");
     if (arquivo == NULL) {
         return 0;
@@ -171,109 +185,188 @@ void imprimir_funcionario_resumido(const funcionario* f) {
 
 
 void rh_inserir_funcionario() {
+
     char nome[100], mae[100], pai[100], endereco[200], telefone[20];
     data dataNasc;
     data dataCont;
-    long posicao;
-    chaveComposta chave;
-    
-    printf(" \nINSERIR NOVO FUNCIONARIO\n");
 
-    // 1. NOME
+    int posicao;
+    chaveComposta chave;
+
+    printf("\n========== INSERIR FUNCIONARIO ==========\n");
+
+    // Nome
     printf("Nome: ");
-    fgets(nome, 100, stdin);
-    nome[strcspn(nome, "\n")] = '\0' ;//coloca o \0 no final
-    
-    // 2. DATA NASCIMENTO
+    fgets(nome, sizeof(nome), stdin);
+    nome[strcspn(nome, "\n")] = '\0';
+
+    // Data nascimento
     printf("Data de Nascimento (dd/mm/aaaa): ");
-    scanf("%d/%d/%d", &dataNasc.dia, &dataNasc.mes, &dataNasc.ano);
+    scanf("%d/%d/%d",
+          &dataNasc.dia,
+          &dataNasc.mes,
+          &dataNasc.ano);
     getchar();
 
-    // PRECISA DE FUNCOES AINDA NAO IMPLEMENTADAS, APENAS TESTE DE ESTRUTURA
+    // Monta a chave
     strcpy(chave.nome, nome);
     chave.dataNascimento = dataNasc;
 
-    if (bplus_buscar(&chave, &posicao)) {
+    // Verifica se já existe
+    if (buscarChaveNaArvore(&chave, &posicao, comparar_chave) == 1) {
+
         funcionario f;
+
         if (carregar_funcionario(&f, posicao)) {
-            printf("\nFuncionario ja cadastrado com esta data!\n");
+
+            printf("\nFuncionario ja cadastrado!\n");
             imprimir_funcionario_resumido(&f);
-            printf("Deseja atualizar os dados? (s/n): ");
+
+            printf("\nDeseja atualizar os dados? (s/n): ");
+
             char resp;
             scanf(" %c", &resp);
             getchar();
+
             if (resp == 's' || resp == 'S') {
-                // Aqui poderia implementar atualização, mas por simplicidade,
-                // apenas informamos que não foi implementado.
-                printf("Atualizacao nao implementada neste exemplo.\n");
+
+                //ATUALIZA DADOS DO FUNCIONARIO
+                char buffer[200];
+
+                printf("\n=== ATUALIZACAO ===\n");
+                printf("Pressione ENTER para manter o valor atual.\n\n");
+
+                printf("Nome da Mae (%s): ", f.filiacao.mae);
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = '\0';
+                if (strlen(buffer) > 0)
+                    strcpy(f.filiacao.mae, buffer);
+
+                printf("Nome do Pai (%s): ", f.filiacao.pai);
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = '\0';
+                if (strlen(buffer) > 0)
+                    strcpy(f.filiacao.pai, buffer);
+
+                printf("Endereco (%s): ", f.contato.endereco);
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = '\0';
+                if (strlen(buffer) > 0)
+                    strcpy(f.contato.endereco, buffer);
+
+                printf("Telefone (%s): ", f.contato.telefone);
+                fgets(buffer, sizeof(buffer), stdin);
+                buffer[strcspn(buffer, "\n")] = '\0';
+                if (strlen(buffer) > 0)
+                    strcpy(f.contato.telefone, buffer);
+
+                printf("Status (1-Ativo / 0-Inativo) [%d]: ", f.contrato.status);
+                scanf("%d", &f.contrato.status);
+                getchar();
+
+                if (f.contrato.status == 0) {
+                    printf("Data de desligamento (dd/mm/aaaa): ");
+                    scanf("%d/%d/%d",
+                        &f.contrato.dataDesligamento.dia,
+                        &f.contrato.dataDesligamento.mes,
+                        &f.contrato.dataDesligamento.ano);
+                    getchar();
+                }
+
+                FILE *arquivo = fopen("funcionarios.dat", "rb+");
+
+                if (salvar_funcionario(&f, &posicao))
+                    printf("\nFuncionario atualizado com sucesso!\n");
+                else
+                    printf("\nErro ao atualizar funcionario.\n");
             }
         }
+
         return;
     }
 
-    
-    // 3. MAE
+    // Dados da mãe
     printf("Nome da Mae: ");
-    fgets(mae, 100, stdin);
+    fgets(mae, sizeof(mae), stdin);
     mae[strcspn(mae, "\n")] = '\0';
-    
-    // 4. PAI
+
+    // Dados do pai
     printf("Nome do Pai: ");
-    fgets(pai, 100, stdin);
+    fgets(pai, sizeof(pai), stdin);
     pai[strcspn(pai, "\n")] = '\0';
-    
-    // 5. ENDERECO
+
+    // Endereço
     printf("Endereco: ");
-    fgets(endereco, 200, stdin);
+    fgets(endereco, sizeof(endereco), stdin);
     endereco[strcspn(endereco, "\n")] = '\0';
-    
-    // 6. TELEFONE
+
+    // Telefone
     printf("Telefone: ");
-    fgets(telefone, 20, stdin);
+    fgets(telefone, sizeof(telefone), stdin);
     telefone[strcspn(telefone, "\n")] = '\0';
-    
-    // 7. DATA CONTRATACAO
+
+    // Data contratação
     printf("Data de Contratacao (dd/mm/aaaa): ");
-    scanf("%d/%d/%d", &dataCont.dia, &dataCont.mes, &dataCont.ano);
+    scanf("%d/%d/%d",
+          &dataCont.dia,
+          &dataCont.mes,
+          &dataCont.ano);
     getchar();
-    
-    // 8. CRIAR FUNCIONARIO (usando dataNasc, não dataCont!)
-    funcionario *novo = criarPessoa(nome, dataNasc.dia, dataNasc.mes, dataNasc.ano, mae, pai, endereco, telefone);
-    
-    
-    // 9. PREENCHER DADOS CONTRATUAIS
+
+    // Cria o funcionário
+    funcionario *novo = criar_funcionario(
+            nome,
+            dataNasc.dia,
+            dataNasc.mes,
+            dataNasc.ano,
+            mae,
+            pai,
+            endereco,
+            telefone);
+
+    if (novo == NULL) {
+        printf("Erro ao alocar memoria.\n");
+        return;
+    }
+
+    // Dados contratuais
     novo->contrato.dataContrato = dataCont;
     novo->contrato.status = 1;
+
     novo->contrato.dataDesligamento.dia = 0;
     novo->contrato.dataDesligamento.mes = 0;
     novo->contrato.dataDesligamento.ano = 0;
-    
-    // 10. SALVAR NO ARQUIVO
+
+    // Salva no arquivo de dados
+
+    posicao = -1;
     if (!salvar_funcionario(novo, &posicao)) {
+
         printf("Erro ao salvar funcionario.\n");
         free(novo);
         return;
     }
-    
-    bplus_inserir(&chave, posicao);
 
-    // 11. CONFIRMAR
-    printf("\nFuncionario inserido com sucesso!\n");
-    
-    //fazer imprime funcionario? 
+    // Insere a chave na árvore B+
+    inserirChaveNaArvore(&novo->chave,posicao,sizeof(chaveComposta),comparar_chave);
+
+    printf("\nFuncionario cadastrado com sucesso!\n");
+
+    imprimir_funcionario_resumido(novo);
 
     free(novo);
 }
 
 void rh_excluir_funcionario() {
     char nome[100];
-    long posicoes[100];
+    int posicoes[100];
     int qtd;
 
     printf("\n=== EXCLUIR FUNCIONARIO ===\n");
     printf("Nome: ");
     fgets(nome, sizeof(nome), stdin);
     nome[strcspn(nome, "\n")] = '\0';
+
 
     qtd = bplus_buscar_por_nome(nome, posicoes, 100);
 
@@ -316,32 +409,52 @@ void rh_excluir_funcionario() {
     char resp;
     scanf(" %c", &resp);
     getchar();
-    if (resp != 'n' && resp != 'N') {
+    if (resp != 's' && resp != 'S') {
         printf("Exclusao cancelada.\n");
         return;
     }
     
     // Remove do índice
     chaveComposta chave = f.chave;
-    bplus_remover(&chave);
-    
-    // Opcional: marcar como excluído no arquivo de dados (não fizemos, mas poderíamos)
+
+    /* remove do índice */
+    deletarChaveNaArvore(&chave, comparar_chave);
+
+    /* marca como inativo */
+    f.contrato.status = 0;
+
+    /* salva novamente no mesmo endereço */
+    salvar_funcionario(&f, &posicoes[idx]);
+
     printf("Funcionario removido com sucesso.\n");
 }
 
 
 void rh_buscar_funcionario() {
     char nome[100];
-    long posicoes[100];
+    int posicoes[100];
     int qtd;
+    chaveComposta chaveMin,chaveMax;
     
     printf("\n=== BUSCAR FUNCIONARIO ===\n");
     printf("Nome: ");
     fgets(nome, sizeof(nome), stdin);
     nome[strcspn(nome, "\n")] = '\0';
     
+    // Monta chave mínima (nome + data mínima)
+    strcpy(chaveMin.nome, nome);
+    chaveMin.dataNascimento.dia = 1;
+    chaveMin.dataNascimento.mes = 1;
+    chaveMin.dataNascimento.ano = 1;
+    
+    // Monta chave máxima (nome + data máxima)
+    strcpy(chaveMax.nome, nome);
+    chaveMax.dataNascimento.dia = 31;
+    chaveMax.dataNascimento.mes = 12;
+    chaveMax.dataNascimento.ano = 9999;
+
     // Busca todos os registros com esse nome (homônimos)
-    qtd = bplus_buscar_por_nome(nome, posicoes, 100);
+    qtd = buscarPorNome(nome, posicoes, 100);
     
     if (qtd == 0) {
         printf("Nenhum funcionario encontrado com esse nome.\n");
