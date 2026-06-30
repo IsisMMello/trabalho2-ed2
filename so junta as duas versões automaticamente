@@ -1,0 +1,421 @@
+[1mdiff --cc RH.c[m
+[1mindex 0689c0e,20e46a4..0000000[m
+[1m--- a/RH.c[m
+[1m+++ b/RH.c[m
+[36m@@@ -180,8 -212,8 +180,8 @@@[m [mvoid rh_inserir_funcionario() [m
+      strcpy(chave.nome, nome);[m
+      chave.dataNascimento = dataNasc;[m
+  [m
+[31m--    // Verifica se já existe[m
+[31m--    if (buscarChaveNaArvore(&chave, &posicao, comparar_chave) == 1) {[m
+[32m++    // Verifica se já existe - CORRIGIDO: compararPorChaveComposta[m
+[32m++    if (buscarChaveNaArvore(&chave, &posicao, compararPorChaveComposta) == 1) {[m
+  [m
+          funcionario f;[m
+  [m
+[36m@@@ -304,99 -336,147 +304,152 @@@[m
+      novo->contrato.dataDesligamento.ano = 0;[m
+  [m
+      // Salva no arquivo de dados[m
+[31m--[m
+      posicao = -1;[m
+      if (!salvar_funcionario(novo, &posicao)) {[m
+[31m--[m
+          printf("Erro ao salvar funcionario.\n");[m
+          free(novo);[m
+          return;[m
+      }[m
+  [m
+[31m--    // Insere a chave na árvore B+[m
+[31m--    inserirChaveNaArvore(&novo->chave,posicao,sizeof(chaveComposta),comparar_chave);[m
+[32m++    // Insere a chave na árvore B+ - CORRIGIDO: compararPorChaveComposta[m
+[32m++    inserirChaveNaArvore(&novo->chave, posicao, sizeof(chaveComposta), compararPorChaveComposta);[m
+  [m
+      printf("\nFuncionario cadastrado com sucesso!\n");[m
+[31m--[m
+      imprimir_funcionario_resumido(novo);[m
+[31m--[m
+      free(novo);[m
+  }[m
+  [m
+  void rh_excluir_funcionario() {[m
+      char nome[100];[m
+[31m-     int posicoes[100];[m
+      int qtd;[m
+[31m -    int*posicoes;[m
+[31m -    chaveComposta chaveMin,chaveMax;[m
+[32m++    int* posicoes;[m
+[32m++    chaveComposta chaveMin, chaveMax;[m
+[32m+     funcionario f;[m
+  [m
+      printf("\n=== EXCLUIR FUNCIONARIO ===\n");[m
+      printf("Nome: ");[m
+      fgets(nome, sizeof(nome), stdin);[m
+      nome[strcspn(nome, "\n")] = '\0';[m
+  [m
+[32m++    // Monta chave mínima e máxima para buscar todos com este nome[m
+[32m++    strcpy(chaveMin.nome, nome);[m
+[32m++    chaveMin.dataNascimento.dia = 1;[m
+[32m++    chaveMin.dataNascimento.mes = 1;[m
+[32m++    chaveMin.dataNascimento.ano = 1;[m
+[32m++    [m
+[32m++    strcpy(chaveMax.nome, nome);[m
+[32m++    chaveMax.dataNascimento.dia = 31;[m
+[32m++    chaveMax.dataNascimento.mes = 12;[m
+[32m++    chaveMax.dataNascimento.ano = 9999;[m
+  [m
+[31m-     qtd = buscarPorNome(nome, posicoes, 100);[m
+[31m -    posicoes = buscarPorNome(nome, posicoes, 100);[m
+[32m++    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);[m
+  [m
+      if (qtd == 0) {[m
+          printf("Nenhum funcionario encontrado com esse nome.\n");[m
+[32m++        free(posicoes);[m
+          return;[m
+      }[m
+  [m
+[31m-     int idx = 0; // índice do registro a excluir[m
+[31m-     if (qtd == 1) {[m
+[31m-         idx = 0;[m
+[31m -    else if(qtd ==1){[m
+[32m++    else if(qtd == 1) {[m
+[32m+         if (carregar_funcionario(&f, posicoes[0])) {[m
+[32m+             imprimir_funcionario(&f);[m
+[32m+             printf("Confirma a exclusao? (s/n): ");[m
+[32m+             char resp;[m
+[32m+             scanf(" %c", &resp);[m
+[32m+             getchar();[m
+[32m+             if (resp != 's' && resp != 'S') {[m
+[32m+                 printf("Exclusao cancelada.\n");[m
+[32m++                free(posicoes);[m
+[32m+                 return;[m
+[32m+             }[m
+[32m+             f.contrato.status = 0;  // 0 = INATIVO[m
+[32m+     [m
+[31m -           //desligamento[m
+[32m++            //desligamento[m
+[32m+             printf("Data de desligamento (dd/mm/aaaa): ");[m
+[32m+             scanf("%d/%d/%d", [m
+[32m+                 &f.contrato.dataDesligamento.dia,[m
+[32m+                 &f.contrato.dataDesligamento.mes,[m
+[32m+                 &f.contrato.dataDesligamento.ano);[m
+[32m+             getchar();[m
+[32m+             [m
+[32m+             //salva[m
+[32m+             if (salvar_funcionario(&f, &posicoes[0])) {[m
+[32m+                 //REMOVE DA ARVORE[m
+[32m+                 deletarChaveNaArvore(&f.chave, comparar_chave);[m
+[32m+                 printf("\n Funcionario removido com sucesso!\n");[m
+[32m+             } else {[m
+[32m+                 printf("\n Erro ao remover funcionario.\n");[m
+[32m+             }[m
+[31m -            [m
+[31m -            //SE FOR DINAMICO[m
+[31m -            free(posicoes);[m
+[32m+         }[m
+[31m -    [m
+[32m++        free(posicoes);[m
+      } else {[m
+[31m-         printf("Encontrados %d homonimos:\n", qtd);[m
+[31m-         for (int i = 0; i < qtd; i++) {[m
+[31m-             funcionario f;[m
+[31m -[m
+[31m -        for(int i = 0; i++; i<qtd){[m
+[32m++        for(int i = 0; i < qtd; i++) {[m
+              if (carregar_funcionario(&f, posicoes[i])) {[m
+                  printf("[%d] ", i+1);[m
+                  imprimir_funcionario_resumido(&f);[m
+[32m+             } else {[m
+[32m+                 printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", [m
+[32m+                         i+1, posicoes[i]);[m
+              }[m
+          }[m
+[31m-         printf("Digite o numero do funcionario que deseja excluir: ");[m
+[31m-         scanf("%d", &idx);[m
+[32m++        [m
+[32m+         data dataFuncionario;[m
+[32m+         chaveComposta chaveFuncionario;[m
+[32m+ [m
+[31m -        printf("Digite a data de nascimento do funcionario que deseja exluir:");[m
+[32m++        printf("Digite a data de nascimento do funcionario que deseja excluir:");[m
+[32m+         printf("Data de Nascimento (dd/mm/aaaa): ");[m
+[32m+         scanf("%d/%d/%d", &dataFuncionario.dia, &dataFuncionario.mes, &dataFuncionario.ano);[m
+          getchar();[m
+[31m-         idx--; // ajusta para índice 0-based[m
+[31m-         if (idx < 0 || idx >= qtd) {[m
+[31m-             printf("Opcao invalida.\n");[m
+[31m-             return;[m
+[31m-         }[m
+[31m-     }[m
+  [m
+[31m-     // Exibe dados (sem histórico) e pede confirmação[m
+[31m-     funcionario f;[m
+[31m-     if (!carregar_funcionario(&f, posicoes[idx])) {[m
+[31m-         printf("Erro ao carregar dados.\n");[m
+[31m-         return;[m
+[31m-     }[m
+[31m-     printf("\nDados do funcionario a ser excluido:\n");[m
+[31m-     imprimir_funcionario_resumido(&f);[m
+[31m-     printf("Confirma a exclusao? (s/n): ");[m
+[31m-     char resp;[m
+[31m-     scanf(" %c", &resp);[m
+[31m-     getchar();[m
+[31m-     if (resp != 's' && resp != 'S') {[m
+[31m-         printf("Exclusao cancelada.\n");[m
+[31m-         return;[m
+[32m+         strcpy(chaveFuncionario.nome, nome);[m
+[32m+         chaveFuncionario.dataNascimento = dataFuncionario;[m
+[32m+ [m
+[31m -        if (carregar_funcionario(&f, posicoes[0])) {[m
+[31m -            imprimir_funcionario(&f);[m
+[31m -            printf("Confirma a exclusao? (s/n): ");[m
+[31m -            char resp;[m
+[31m -            scanf(" %c", &resp);[m
+[31m -            getchar();[m
+[31m -            if (resp != 's' && resp != 'S') {[m
+[31m -                printf("Exclusao cancelada.\n");[m
+[31m -                return;[m
+[31m -            }[m
+[31m -            f.contrato.status = 0;  // 0 = INATIVO[m
+[31m -    [m
+[31m -           //desligamento[m
+[31m -            printf("Data de desligamento (dd/mm/aaaa): ");[m
+[31m -            scanf("%d/%d/%d", [m
+[31m -                &f.contrato.dataDesligamento.dia,[m
+[31m -                &f.contrato.dataDesligamento.mes,[m
+[31m -                &f.contrato.dataDesligamento.ano);[m
+[31m -            getchar();[m
+[31m -            [m
+[31m -            //salva[m
+[31m -            if (salvar_funcionario(&f, &posicoes[0])) {[m
+[31m -                //REMOVE DA ARVORE[m
+[31m -                deletarChaveNaArvore(&f.chave, comparar_chave);[m
+[31m -                printf("\n Funcionario removido com sucesso!\n");[m
+[31m -            } else {[m
+[31m -                printf("\n Erro ao remover funcionario.\n");[m
+[32m++        int posicaoFuncionario;[m
+[32m++        [m
+[32m++        if (buscarChaveNaArvore(&chaveFuncionario, &posicaoFuncionario, comparar_chave) == 1) {[m
+[32m++            if (carregar_funcionario(&f, posicaoFuncionario)) {[m
+[32m++                imprimir_funcionario(&f);[m
+[32m++                printf("Confirma a exclusao? (s/n): ");[m
+[32m++                char resp;[m
+[32m++                scanf(" %c", &resp);[m
+[32m++                getchar();[m
+[32m++                if (resp != 's' && resp != 'S') {[m
+[32m++                    printf("Exclusao cancelada.\n");[m
+[32m++                    free(posicoes);[m
+[32m++                    return;[m
+[32m++                }[m
+[32m++                f.contrato.status = 0;  // 0 = INATIVO[m
+[32m++        [m
+[32m++                //desligamento[m
+[32m++                printf("Data de desligamento (dd/mm/aaaa): ");[m
+[32m++                scanf("%d/%d/%d", [m
+[32m++                    &f.contrato.dataDesligamento.dia,[m
+[32m++                    &f.contrato.dataDesligamento.mes,[m
+[32m++                    &f.contrato.dataDesligamento.ano);[m
+[32m++                getchar();[m
+[32m++                [m
+[32m++                //salva[m
+[32m++                if (salvar_funcionario(&f, &posicaoFuncionario)) {[m
+[32m++                    //REMOVE DA ARVORE[m
+[32m++                    deletarChaveNaArvore(&f.chave, comparar_chave);[m
+[32m++                    printf("\n Funcionario removido com sucesso!\n");[m
+[32m++                } else {[m
+[32m++                    printf("\n Erro ao remover funcionario.\n");[m
+[32m++                }[m
+[32m+             }[m
+[31m -            [m
+[31m -            //SE FOR DINAMICO[m
+[31m -            free(posicoes);[m
+[32m++        } else {[m
+[32m++            printf("Funcionario com a data informada nao encontrado.\n");[m
+[32m+         }[m
+[31m -    [m
+[32m++        free(posicoes);[m
+      }[m
+[31m-     [m
+[31m-     // Remove do índice[m
+[31m-     chaveComposta chave = f.chave;[m
+[31m- [m
+[31m-     f.contrato.status = 0;[m
+[31m- [m
+[31m-     salvar_funcionario(&f, &posicoes[idx]);[m
+[31m- [m
+[31m-     deletarChaveNaArvore(&f.chave, comparar_chave);[m
+[31m- [m
+[31m-     printf("Funcionario removido com sucesso.\n");[m
+  }[m
+  [m
+[31m -[m
+[31m -    [m
+[31m -[m
+[31m -[m
+  void rh_buscar_funcionario() {[m
+      char nome[100];[m
+[31m-     int posicoes[100];[m
+[32m+     funcionario f;[m
+      int qtd;[m
+[31m -    int*posicoes;[m
+[31m--    chaveComposta chaveMin,chaveMax;[m
+[32m++    int* posicoes;[m
+[32m++    chaveComposta chaveMin, chaveMax;[m
+      [m
+      printf("\n=== BUSCAR FUNCIONARIO ===\n");[m
+      printf("Nome: ");[m
+[36m@@@ -416,56 -496,73 +469,66 @@@[m
+      chaveMax.dataNascimento.ano = 9999;[m
+  [m
+      // Busca todos os registros com esse nome (homônimos)[m
+[31m-     qtd = buscarPorNome(nome, posicoes, 100);[m
+[31m -    posicoes = buscarIntervalo(chaveMax,chaveMin,&qtd);[m
+[31m -[m
+[31m -[m
+[32m++    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);[m
+      [m
+      if (qtd == 0) {[m
+          printf("Nenhum funcionario encontrado com esse nome.\n");[m
+[32m++        free(posicoes);[m
+          return;[m
+      }[m
+      [m
+[31m-     if (qtd == 1) {[m
+[31m-         funcionario f;[m
+[31m -    else if (qtd ==1){[m
+[32m++    else if (qtd == 1) {[m
+          if (carregar_funcionario(&f, posicoes[0])) {[m
+              imprimir_funcionario(&f);[m
+          } else {[m
+[31m-             printf("Erro ao carregar dados.\n");[m
+[31m-         }[m
+[31m-         return;[m
+[31m-     }[m
+[31m-     [m
+[31m-     // Múltiplos homônimos[m
+[31m-     printf("Encontrados %d funcionarios com o nome '%s':\n", qtd, nome);[m
+[31m-     for (int i = 0; i < qtd; i++) {[m
+[31m-         funcionario f;[m
+[31m-         if (carregar_funcionario(&f, posicoes[i])) {[m
+[31m-             printf("[%d] ", i+1);[m
+[31m-             imprimir_funcionario_resumido(&f);[m
+[32m+             printf("ERRO: Nao foi possivel carregar o funcionario ");[m
+          }[m
+[31m-     }[m
+[31m-     [m
+[31m-     printf("Digite o numero correspondente ao funcionario desejado: ");[m
+[31m-     int escolha;[m
+[31m-     scanf("%d", &escolha);[m
+[31m-     getchar();[m
+[31m-     [m
+[31m-     if (escolha < 1 || escolha > qtd) {[m
+[31m-         printf("Opcao invalida.\n");[m
+[31m-         return;[m
+[31m-     }[m
+[31m-     [m
+[31m-     funcionario f;[m
+[31m-     if (carregar_funcionario(&f, posicoes[escolha-1])) {[m
+[31m-         imprimir_funcionario(&f);[m
+[31m -        [m
+[31m -    }else{[m
+[31m -[m
+[31m -        for(int i = 0; i++; i<qtd){[m
+[32m++        free(posicoes);[m
+[32m +    } else {[m
+[31m-         printf("Erro ao carregar dados.\n");[m
+[32m++        for(int i = 0; i < qtd; i++) {[m
+[32m+             if (carregar_funcionario(&f, posicoes[i])) {[m
+[32m+                 printf("[%d] ", i+1);[m
+[32m+                 imprimir_funcionario_resumido(&f);[m
+[32m+             } else {[m
+[32m+                 printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", [m
+[32m+                        i+1, posicoes[i]);[m
+[32m+             }[m
+[31m -[m
+[32m+         }[m
+[32m++        [m
+[32m+         data dataFuncionario;[m
+[32m+         chaveComposta chaveFuncionario;[m
+[32m+ [m
+[32m+         printf("Digite a data de nascimento do funcionario que deseja buscar:");[m
+[32m+         printf("Data de Nascimento (dd/mm/aaaa): ");[m
+[32m+         scanf("%d/%d/%d", &dataFuncionario.dia, &dataFuncionario.mes, &dataFuncionario.ano);[m
+[32m+         getchar();[m
+[32m+ [m
+[32m+         strcpy(chaveFuncionario.nome, nome);[m
+[32m+         chaveFuncionario.dataNascimento = dataFuncionario;[m
+[32m+ [m
+[32m+         int posicaoFuncionario;[m
+[32m+ [m
+[32m+         if (buscarChaveNaArvore(&chaveFuncionario, &posicaoFuncionario, comparar_chave) == 1) {[m
+[32m+             funcionario funcionarioImprimir;[m
+[32m+             if (carregar_funcionario(&funcionarioImprimir, posicaoFuncionario)) {[m
+[32m+                 printf("\n Dados do funcionario selecionado\n");[m
+[32m+                 imprimir_funcionario(&funcionarioImprimir); [m
+[32m+             } else {[m
+[32m+                 printf("Erro ao carregar os dados do funcionario.\n");[m
+[32m+             }[m
+[32m+         } else {[m
+[32m+             printf("Funcionario com a data informada nao encontrado.\n");[m
+[32m+         }[m
+[31m -        [m
+[31m -        [m
+[32m++        free(posicoes);[m
+      }[m
+[31m -    [m
+[31m -    [m
+  }[m
+  [m
+[31m -[m
+  void rh_listar_intervalo() {[m
+[31m--[m
+[31m--[m
+      char nomeA[100], nomeB[100];[m
+[31m--    chaveComposta chaveMin,chaveMax;[m
+[31m -    int*posicoes;[m
+[32m++    chaveComposta chaveMin, chaveMax;[m
+[32m++    int* posicoes;[m
+[32m+     int qtd;[m
+[32m++    [m
+      printf("\n=== LISTAGEM POR INTERVALO ===\n");[m
+      printf("Nome (A): ");[m
+      fgets(nomeA, sizeof(nomeA), stdin);[m
+[36m@@@ -488,8 -585,30 +551,26 @@@[m
+      printf("\nFuncionarios no intervalo (%s, %s):\n", nomeA, nomeB);[m
+      printf("----------------------------------------\n");[m
+     [m
+[31m-     imprimirChavesIntervalo(&chaveMin, &chaveMax);[m
+[31m -    posicoes = buscarIntervalo(&chaveMin, &chaveMax, &qtd);[m
+[32m++    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);[m
+  [m
+[31m -    if(qtd == 0)printf("nenhum funcionario");[m
+[31m -    else{[m
+[32m++    if(qtd == 0) {[m
+[32m++        printf("nenhum funcionario");[m
+[32m++    } else {[m
+[32m+         printf("\nTotal: %d funcionario(s) encontrados.\n", qtd);[m
+[32m+         for (int i = 0; i < qtd; i++) {[m
+[32m+             funcionario f;[m
+[32m+             [m
+[32m+             // Carrega o funcionário da posição i[m
+[32m+             if (carregar_funcionario(&f, posicoes[i])) {[m
+[32m+                 printf("[%d] ", i+1);[m
+[31m -                //FUNCIONARIO RESUMIDO OU NORMAL????[m
+[31m -                imprimir_funcionario(&f);[m
+[32m++                imprimir_funcionario_resumido(&f);[m
+[32m+             } else {[m
+[32m+                 printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", [m
+[32m+                        i+1, posicoes[i]);[m
+[32m+             }[m
+[32m+         }[m
+[31m -      [m
+[31m -[m
+[32m+     }[m
+[32m+     [m
+[32m++    free(posicoes);[m
+      printf("----------------------------------------\n");[m
+  }[m
+[31m-     [m
+[31m -[m
+[31m -[m
+[31m -[m

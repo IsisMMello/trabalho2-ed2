@@ -47,7 +47,7 @@ funcionario* criar_funcionario(char* nome, int dia, int mes, int ano, char* mae,
 }
 
 //calbacks
-int compararPorChaveComposta(const void*a, const void*b){
+int comparar_chave(const void*a, const void*b){
     const chaveComposta *chave1 = (const chaveComposta *)a;
     const chaveComposta *chave2 = (const chaveComposta *)b;
 
@@ -67,6 +67,36 @@ int compararPorChaveComposta(const void*a, const void*b){
     return 0; //data igual
 
 }
+
+// //callback 
+// size_t tamanho_chave(const void* chave) {
+//     return sizeof(chaveComposta);
+// }
+
+// void escrever_chave(const void* chave, void* buffer) {
+//     memcpy(buffer, chave, sizeof(chaveComposta));
+// }
+
+// void ler_chave(void* destino, const void* buffer) {
+//     memcpy(destino, buffer, sizeof(chaveComposta));
+// }
+
+//precisa??
+// //serializacao funcionario
+
+// void serializar_funcionario(const funcionario* f, void* buffer) {
+//     memcpy(buffer, f, sizeof(funcionario));
+// }
+
+// //desserializacao funcionario
+// void desserializar_funcionario(funcionario* f, const void* buffer) {
+//     memcpy(f, buffer, sizeof(funcionario));
+// }
+
+
+
+
+
 
 int salvar_funcionario(const funcionario *f, int *posicao)
 {
@@ -152,6 +182,8 @@ void imprimir_funcionario_resumido(const funcionario* f) {
     printf("----------------------------------------\n");
 }
 
+
+
 void rh_inserir_funcionario() {
 
     char nome[100], mae[100], pai[100], endereco[200], telefone[20];
@@ -180,8 +212,8 @@ void rh_inserir_funcionario() {
     strcpy(chave.nome, nome);
     chave.dataNascimento = dataNasc;
 
-    // Verifica se já existe - CORRIGIDO: compararPorChaveComposta
-    if (buscarChaveNaArvore(&chave, &posicao, compararPorChaveComposta) == 1) {
+    // Verifica se já existe
+    if (buscarChaveNaArvore(&chave, &posicao, comparar_chave) == 1) {
 
         funcionario f;
 
@@ -304,152 +336,100 @@ void rh_inserir_funcionario() {
     novo->contrato.dataDesligamento.ano = 0;
 
     // Salva no arquivo de dados
+
     posicao = -1;
     if (!salvar_funcionario(novo, &posicao)) {
+
         printf("Erro ao salvar funcionario.\n");
         free(novo);
         return;
     }
 
-    // Insere a chave na árvore B+ - CORRIGIDO: compararPorChaveComposta
-    inserirChaveNaArvore(&novo->chave, posicao, sizeof(chaveComposta), compararPorChaveComposta);
+    // Insere a chave na árvore B+
+    inserirChaveNaArvore(&novo->chave,posicao,sizeof(chaveComposta),comparar_chave);
 
     printf("\nFuncionario cadastrado com sucesso!\n");
+
     imprimir_funcionario_resumido(novo);
+
     free(novo);
 }
 
 void rh_excluir_funcionario() {
     char nome[100];
+    int posicoes[100];
     int qtd;
-    int* posicoes;
-    chaveComposta chaveMin, chaveMax;
-    funcionario f;
 
     printf("\n=== EXCLUIR FUNCIONARIO ===\n");
     printf("Nome: ");
     fgets(nome, sizeof(nome), stdin);
     nome[strcspn(nome, "\n")] = '\0';
 
-    // Monta chave mínima e máxima para buscar todos com este nome
-    strcpy(chaveMin.nome, nome);
-    chaveMin.dataNascimento.dia = 1;
-    chaveMin.dataNascimento.mes = 1;
-    chaveMin.dataNascimento.ano = 1;
-    
-    strcpy(chaveMax.nome, nome);
-    chaveMax.dataNascimento.dia = 31;
-    chaveMax.dataNascimento.mes = 12;
-    chaveMax.dataNascimento.ano = 9999;
 
-    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);
+    qtd = buscarPorNome(nome, posicoes, 100);
 
     if (qtd == 0) {
         printf("Nenhum funcionario encontrado com esse nome.\n");
-        free(posicoes);
         return;
     }
 
-    else if(qtd == 1) {
-        if (carregar_funcionario(&f, posicoes[0])) {
-            imprimir_funcionario(&f);
-            printf("Confirma a exclusao? (s/n): ");
-            char resp;
-            scanf(" %c", &resp);
-            getchar();
-            if (resp != 's' && resp != 'S') {
-                printf("Exclusao cancelada.\n");
-                free(posicoes);
-                return;
-            }
-            f.contrato.status = 0;  // 0 = INATIVO
-    
-            //desligamento
-            printf("Data de desligamento (dd/mm/aaaa): ");
-            scanf("%d/%d/%d", 
-                &f.contrato.dataDesligamento.dia,
-                &f.contrato.dataDesligamento.mes,
-                &f.contrato.dataDesligamento.ano);
-            getchar();
-            
-            //salva
-            if (salvar_funcionario(&f, &posicoes[0])) {
-                //REMOVE DA ARVORE
-                deletarChaveNaArvore(&f.chave, comparar_chave);
-                printf("\n Funcionario removido com sucesso!\n");
-            } else {
-                printf("\n Erro ao remover funcionario.\n");
-            }
-        }
-        free(posicoes);
+    int idx = 0; // índice do registro a excluir
+    if (qtd == 1) {
+        idx = 0;
     } else {
-        for(int i = 0; i < qtd; i++) {
+        printf("Encontrados %d homonimos:\n", qtd);
+        for (int i = 0; i < qtd; i++) {
+            funcionario f;
             if (carregar_funcionario(&f, posicoes[i])) {
                 printf("[%d] ", i+1);
                 imprimir_funcionario_resumido(&f);
-            } else {
-                printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", 
-                        i+1, posicoes[i]);
             }
         }
-        
-        data dataFuncionario;
-        chaveComposta chaveFuncionario;
-
-        printf("Digite a data de nascimento do funcionario que deseja excluir:");
-        printf("Data de Nascimento (dd/mm/aaaa): ");
-        scanf("%d/%d/%d", &dataFuncionario.dia, &dataFuncionario.mes, &dataFuncionario.ano);
+        printf("Digite o numero do funcionario que deseja excluir: ");
+        scanf("%d", &idx);
         getchar();
-
-        strcpy(chaveFuncionario.nome, nome);
-        chaveFuncionario.dataNascimento = dataFuncionario;
-
-        int posicaoFuncionario;
-        
-        if (buscarChaveNaArvore(&chaveFuncionario, &posicaoFuncionario, comparar_chave) == 1) {
-            if (carregar_funcionario(&f, posicaoFuncionario)) {
-                imprimir_funcionario(&f);
-                printf("Confirma a exclusao? (s/n): ");
-                char resp;
-                scanf(" %c", &resp);
-                getchar();
-                if (resp != 's' && resp != 'S') {
-                    printf("Exclusao cancelada.\n");
-                    free(posicoes);
-                    return;
-                }
-                f.contrato.status = 0;  // 0 = INATIVO
-        
-                //desligamento
-                printf("Data de desligamento (dd/mm/aaaa): ");
-                scanf("%d/%d/%d", 
-                    &f.contrato.dataDesligamento.dia,
-                    &f.contrato.dataDesligamento.mes,
-                    &f.contrato.dataDesligamento.ano);
-                getchar();
-                
-                //salva
-                if (salvar_funcionario(&f, &posicaoFuncionario)) {
-                    //REMOVE DA ARVORE
-                    deletarChaveNaArvore(&f.chave, comparar_chave);
-                    printf("\n Funcionario removido com sucesso!\n");
-                } else {
-                    printf("\n Erro ao remover funcionario.\n");
-                }
-            }
-        } else {
-            printf("Funcionario com a data informada nao encontrado.\n");
+        idx--; // ajusta para índice 0-based
+        if (idx < 0 || idx >= qtd) {
+            printf("Opcao invalida.\n");
+            return;
         }
-        free(posicoes);
     }
+
+    // Exibe dados (sem histórico) e pede confirmação
+    funcionario f;
+    if (!carregar_funcionario(&f, posicoes[idx])) {
+        printf("Erro ao carregar dados.\n");
+        return;
+    }
+    printf("\nDados do funcionario a ser excluido:\n");
+    imprimir_funcionario_resumido(&f);
+    printf("Confirma a exclusao? (s/n): ");
+    char resp;
+    scanf(" %c", &resp);
+    getchar();
+    if (resp != 's' && resp != 'S') {
+        printf("Exclusao cancelada.\n");
+        return;
+    }
+    
+    // Remove do índice
+    chaveComposta chave = f.chave;
+
+    f.contrato.status = 0;
+
+    salvar_funcionario(&f, &posicoes[idx]);
+
+    deletarChaveNaArvore(&f.chave, comparar_chave);
+
+    printf("Funcionario removido com sucesso.\n");
 }
+
 
 void rh_buscar_funcionario() {
     char nome[100];
-    funcionario f;
+    int posicoes[100];
     int qtd;
-    int* posicoes;
-    chaveComposta chaveMin, chaveMax;
+    chaveComposta chaveMin,chaveMax;
     
     printf("\n=== BUSCAR FUNCIONARIO ===\n");
     printf("Nome: ");
@@ -469,66 +449,57 @@ void rh_buscar_funcionario() {
     chaveMax.dataNascimento.ano = 9999;
 
     // Busca todos os registros com esse nome (homônimos)
-    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);
+    qtd = buscarPorNome(nome, posicoes, 100);
     
     if (qtd == 0) {
         printf("Nenhum funcionario encontrado com esse nome.\n");
-        free(posicoes);
         return;
     }
     
-    else if (qtd == 1) {
+    if (qtd == 1) {
+        funcionario f;
         if (carregar_funcionario(&f, posicoes[0])) {
             imprimir_funcionario(&f);
         } else {
-            printf("ERRO: Nao foi possivel carregar o funcionario ");
+            printf("Erro ao carregar dados.\n");
         }
-        free(posicoes);
+        return;
+    }
+    
+    // Múltiplos homônimos
+    printf("Encontrados %d funcionarios com o nome '%s':\n", qtd, nome);
+    for (int i = 0; i < qtd; i++) {
+        funcionario f;
+        if (carregar_funcionario(&f, posicoes[i])) {
+            printf("[%d] ", i+1);
+            imprimir_funcionario_resumido(&f);
+        }
+    }
+    
+    printf("Digite o numero correspondente ao funcionario desejado: ");
+    int escolha;
+    scanf("%d", &escolha);
+    getchar();
+    
+    if (escolha < 1 || escolha > qtd) {
+        printf("Opcao invalida.\n");
+        return;
+    }
+    
+    funcionario f;
+    if (carregar_funcionario(&f, posicoes[escolha-1])) {
+        imprimir_funcionario(&f);
     } else {
-        for(int i = 0; i < qtd; i++) {
-            if (carregar_funcionario(&f, posicoes[i])) {
-                printf("[%d] ", i+1);
-                imprimir_funcionario_resumido(&f);
-            } else {
-                printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", 
-                       i+1, posicoes[i]);
-            }
-        }
-        
-        data dataFuncionario;
-        chaveComposta chaveFuncionario;
-
-        printf("Digite a data de nascimento do funcionario que deseja buscar:");
-        printf("Data de Nascimento (dd/mm/aaaa): ");
-        scanf("%d/%d/%d", &dataFuncionario.dia, &dataFuncionario.mes, &dataFuncionario.ano);
-        getchar();
-
-        strcpy(chaveFuncionario.nome, nome);
-        chaveFuncionario.dataNascimento = dataFuncionario;
-
-        int posicaoFuncionario;
-
-        if (buscarChaveNaArvore(&chaveFuncionario, &posicaoFuncionario, comparar_chave) == 1) {
-            funcionario funcionarioImprimir;
-            if (carregar_funcionario(&funcionarioImprimir, posicaoFuncionario)) {
-                printf("\n Dados do funcionario selecionado\n");
-                imprimir_funcionario(&funcionarioImprimir); 
-            } else {
-                printf("Erro ao carregar os dados do funcionario.\n");
-            }
-        } else {
-            printf("Funcionario com a data informada nao encontrado.\n");
-        }
-        free(posicoes);
+        printf("Erro ao carregar dados.\n");
     }
 }
 
+
 void rh_listar_intervalo() {
+
+
     char nomeA[100], nomeB[100];
-    chaveComposta chaveMin, chaveMax;
-    int* posicoes;
-    int qtd;
-    
+    chaveComposta chaveMin,chaveMax;
     printf("\n=== LISTAGEM POR INTERVALO ===\n");
     printf("Nome (A): ");
     fgets(nomeA, sizeof(nomeA), stdin);
@@ -551,26 +522,8 @@ void rh_listar_intervalo() {
     printf("\nFuncionarios no intervalo (%s, %s):\n", nomeA, nomeB);
     printf("----------------------------------------\n");
    
-    posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, comparar_chave);
+    imprimirChavesIntervalo(&chaveMin, &chaveMax);
 
-    if(qtd == 0) {
-        printf("nenhum funcionario");
-    } else {
-        printf("\nTotal: %d funcionario(s) encontrados.\n", qtd);
-        for (int i = 0; i < qtd; i++) {
-            funcionario f;
-            
-            // Carrega o funcionário da posição i
-            if (carregar_funcionario(&f, posicoes[i])) {
-                printf("[%d] ", i+1);
-                imprimir_funcionario_resumido(&f);
-            } else {
-                printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", 
-                       i+1, posicoes[i]);
-            }
-        }
-    }
-    
-    free(posicoes);
     printf("----------------------------------------\n");
 }
+    
