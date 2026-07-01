@@ -38,7 +38,7 @@ typedef struct funcionario {
     chaveComposta chave;
     afiliacao filiacao;
     dadosContato contato;
-    float historicoPagamentos[12];
+    double historicoPagamentos[12];
     dadosContratuais contrato;
 } funcionario;
 

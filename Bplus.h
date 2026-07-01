@@ -2,7 +2,9 @@
 
 #define ORDEM 4
 #include <stdbool.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
 
 /* ============================================================
    Estruturas e constantes
@@ -80,8 +82,6 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamCha
 // Inicializa o arquivo da árvore com um cabeçalho (ordem, tamanho da chave, etc.)
 void inicializarArvore(int ordem, int tamChave);
 
-// Imprime a árvore (para depuração) – implementação a ser fornecida
-void imprimirArvore();
 
 // Retorna a página folha onde a chave deveria estar (navegação a partir da raiz)
 Pagina buscarFolha(Cabecalho *header, const void *chave, int (*comparar)(const void *, const void *));

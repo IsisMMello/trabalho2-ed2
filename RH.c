@@ -208,12 +208,13 @@ void atualizar_funcionario(funcionario *f, int posicao){
     char opcao;
     int opcaoMes;
     printf("Deseja inserir/atualizar pagamento? s/n");
-    scanf("%c", &opcao);
+    scanf(" %c", &opcao);
+    getchar();
     if(opcao == 's'|| opcao == 'S'){
         printf("Digite o mes do pagamento: (1 a 12) ");
         scanf("%d",&opcaoMes);
         printf("Digite o valor do pagamento.");
-        scanf("%lf",f->historicoPagamentos[opcaoMes-1]);
+        scanf("%lf",&f->historicoPagamentos[opcaoMes-1]);
 
     }
 
@@ -597,4 +598,11 @@ void rh_listar_intervalo() {
 
 
 //IMPRIMIR ARVORE 
-void imprimirArvore();
+void imprimirArvore(){  
+    printf("\n========================================\n");
+    printf("  ESTRUTURA DA ÁRVORE B+\n");
+    printf("========================================\n");
+    printf("Funcionalidade em desenvolvimento.\n");
+    printf("Implemente a impressão hierárquica aqui.\n");
+    printf("========================================\n");
+}

@@ -70,6 +70,10 @@ void ordenarPaginaInterna(Pagina *p, int (*comparar)(const void *, const void *)
         p->filho[j + 1] = filhoDireitaAux;
     }
 }
+//inserir verificarUnderflow AQUI PQ SE NAO DA AVISO
+void verificarUnderflow(FILE *arquivo, Pagina *pagina, int (*comparar)(const void*, const void*));
+
+
 
 //inserção e remoção
 void inserirElementoNaPagina(Pagina *p, const void* chave, int indice, int (*comparar)(const void *, const void *)){
@@ -98,6 +102,7 @@ void inserirElementoNaPagina(Pagina *p, const void* chave, int indice, int (*com
     }
 }
 
+
 int removerElementoDaPagina(Pagina *p, const void *chave, int (*comparar)(const void*, const void*)){
     int pos = -1;
 
@@ -111,7 +116,7 @@ int removerElementoDaPagina(Pagina *p, const void *chave, int (*comparar)(const 
 
     // chave não encontrada, retorna
     if(pos == -1){
-        return;
+        return -1;
     }
 
     //Se encontrada, desloca elementos para esquerda
@@ -125,6 +130,7 @@ int removerElementoDaPagina(Pagina *p, const void *chave, int (*comparar)(const 
     p->filho[p->qtElementos-1] = 0;    // (ou -1, dependendo do seu padrão para "sem filho")
 
     p->qtElementos--;
+    return 1;
 }
 
 //busca
@@ -134,7 +140,7 @@ int buscarPaginaLivre(){
     FILE *arquivo = fopen(arquivoArvore, "rb");
     if (arquivo == NULL){
         printf("Erro ao abrir o arquivoArvore!\n");
-        return;
+        return -1;
     }
     //pula o cabecalho
     fseek(arquivo, sizeof(Cabecalho), SEEK_SET);
@@ -397,7 +403,7 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
         }
 
         // propaga a chave mediana para o pai, e faz a cisão caso nescessário
-        inserirElemento(pai, chaveMediana, novaPagina->indice, comparar);
+        inserirElementoNaPagina(pai, chaveMediana, novaPagina->indice, comparar);
         
         free(pai); 
     }
@@ -450,15 +456,15 @@ void inicializarArvore(int ordem, int tamChave){
         arvore.ordem = ordem; // podemos tirar isso e usar do define
         arvore.qtdPaginas = 0;
 
-        FILE *arquivo = fopen(arquivoArvore, "wb+");
-        fwrite(&arvore, sizeof(Cabecalho), 1, arquivo);
+        FILE *novoArquivo = fopen(arquivoArvore, "wb+");
+        fwrite(&arvore, sizeof(Cabecalho), 1, novoArquivo);
+        fclose(novoArquivo);
     }
 
-    else 
+    else {
         printf("Arquivo da árvore já existe!\n");
-
-    fclose(arquivo);
-
+        fclose(arquivo);
+    }
 }
 
 void imprimirArvore();
@@ -650,7 +656,7 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamCha
         //caso a árvore não esteja vazia
         Pagina p = buscarFolha(&header, chave, comparar);
 
-        inserirElemento(&p, chave, enderecoRegistro, comparar);
+        inserirElementoNaPagina(&p, chave, enderecoRegistro, comparar);
     }
 
     fclose(arquivo);
@@ -681,7 +687,7 @@ void deletarChaveNaArvore(const void *chave, int (*comparar)(const void *, const
     Pagina pagina = buscarFolha(&header, chave, comparar);
 
     // tenta remover
-    if (!removerElemento(&pagina, chave, comparar)){
+    if (!removerElementoDaPagina(&pagina, chave, comparar)){
         printf("Chave não encontrada.\n");
         fclose(arquivo);
         return;
