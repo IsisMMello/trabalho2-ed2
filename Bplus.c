@@ -576,6 +576,54 @@ int* buscarChavesIntervalo(const void *chaveMin, const void *chaveMax, int *qtEn
 
 }
 
+void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamChave, int (*comparar)(const void*, const void*)){
+
+    FILE *arquivo = fopen(arquivoArvore, "r+b");
+
+    if (arquivo == NULL){
+        printf("Erro ao abrir o arquivoArvore!\n");
+        return;
+    }
+
+    Cabecalho header;
+
+    if (fread(&header, sizeof(Cabecalho), 1, arquivo) != 1){
+        printf("Erro ao ler o cabeçalho!!\n");
+        fclose(arquivo);
+        return;
+    }
+
+    //se a árvore estiver vazia
+    if (header.raiz == -1){
+
+        Pagina *novaRaiz = criaPagina();
+        inicializarPagina(novaRaiz, 0, 1); // 1 indica que é folha
+
+        novaRaiz->chave[0] = (void*)chave;
+        novaRaiz->filho[0] = enderecoRegistro;
+        novaRaiz->qtElementos = 1;
+
+        header.raiz = 0;
+        header.qtdPaginas = 1;
+
+        fseek(arquivo, 0, SEEK_SET);
+        fwrite(&header, sizeof(Cabecalho), 1, arquivo);
+
+        fseek(arquivo, sizeof(Cabecalho), SEEK_SET);
+        fwrite(novaRaiz, sizeof(Pagina), 1, arquivo);
+
+        free(novaRaiz);
+    }
+    else{
+        //caso a árvore não esteja vazia
+        Pagina p = buscarFolha(&header, chave, comparar);
+
+        inserirElemento(&p, chave, enderecoRegistro, comparar);
+    }
+
+    fclose(arquivo);
+}
+
 //impressão
 void imprimirArvore();
 
