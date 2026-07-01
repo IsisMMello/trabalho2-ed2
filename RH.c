@@ -32,7 +32,7 @@ funcionario* criar_funcionario(char* nome, int dia, int mes, int ano, char* mae,
     novo->contrato.dataContrato.dia = 0;
     novo->contrato.dataContrato.mes = 0;
     novo->contrato.dataContrato.ano = 0;
-    novo->contrato.status = 0;
+    novo->contrato.status = 1;
     novo->contrato.dataDesligamento.dia = 0;
     novo->contrato.dataDesligamento.mes = 0;
     novo->contrato.dataDesligamento.ano = 0;
@@ -281,15 +281,7 @@ void rh_inserir_funcionario() {
     getchar();
 
     // Cria o funcionário
-    funcionario *novo = criar_funcionario(
-            nome,
-            dataNasc.dia,
-            dataNasc.mes,
-            dataNasc.ano,
-            mae,
-            pai,
-            endereco,
-            telefone);
+    funcionario *novo = criar_funcionario(nome, dataNasc.dia,  dataNasc.mes, dataNasc.ano, mae, pai, endereco, telefone);
 
     if (novo == NULL) {
         printf("Erro ao alocar memoria.\n");
@@ -336,7 +328,7 @@ void rh_excluir_funcionario() {
     strcpy(chaveMin.nome, nome);
     chaveMin.dataNascimento.dia = 1;
     chaveMin.dataNascimento.mes = 1;
-    chaveMin.dataNascimento.ano = 1;
+    chaveMin.dataNascimento.ano = 1000;
     
     strcpy(chaveMax.nome, nome);
     chaveMax.dataNascimento.dia = 31;
@@ -458,7 +450,7 @@ void rh_buscar_funcionario() {
     strcpy(chaveMin.nome, nome);
     chaveMin.dataNascimento.dia = 1;
     chaveMin.dataNascimento.mes = 1;
-    chaveMin.dataNascimento.ano = 1;
+    chaveMin.dataNascimento.ano = 1000;
     
     strcpy(chaveMax.nome, nome);
     chaveMax.dataNascimento.dia = 31;
@@ -536,9 +528,9 @@ void rh_listar_intervalo() {
     nomeB[strcspn(nomeB, "\n")] = '\0';
     
     strcpy(chaveMin.nome, nomeA);
-    chaveMin.dataNascimento.dia = 0;
-    chaveMin.dataNascimento.mes = 0;
-    chaveMin.dataNascimento.ano = 0;
+    chaveMin.dataNascimento.dia = 1;
+    chaveMin.dataNascimento.mes = 1;
+    chaveMin.dataNascimento.ano = 1000;
     
     strcpy(chaveMax.nome, nomeB);
     chaveMax.dataNascimento.dia = 31;
@@ -548,7 +540,7 @@ void rh_listar_intervalo() {
     printf("\nFuncionarios no intervalo (%s, %s):\n", nomeA, nomeB);
     printf("----------------------------------------\n");
    
-    // CORRIGIDO: compararPorChaveComposta
+
     posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, compararPorChaveComposta);
 
     if(qtd == 0) {

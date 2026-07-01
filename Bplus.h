@@ -26,7 +26,7 @@ void destroiPagina(Pagina *p); // eduardo
 void inserirElemento(Pagina *p, const void *chave, int indice, int (*comparar)(const void *, const void *)); // eduardo
 int removerElemento(Pagina *p, const void *chave, int (*comparar)(const void *, const void *));
 void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *) ); // eduardo
-void verificarUnderflow(Pagina *pagina);
+void verificarUnderflow(FILE *arquivo, Pagina *pagina);
 void ordenarPaginaFolha(Pagina *p, int (*comparar)(const void *, const void *)); // eduardo
 int buscarPaginaLivre();
 
