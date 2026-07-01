@@ -10,7 +10,6 @@
 
 typedef struct {
     int ordem, qtdPaginas, raiz; //raiz recebe -1 na criação do cabeçalho == VAZIA
-    size_t tamChave;
 } Cabecalho;
 
 typedef struct Pagina{

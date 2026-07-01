@@ -61,6 +61,7 @@ void atualizar_funcionario(funcionario *f, int posicao);
 
 void imprimir_funcionario(const funcionario* f,int opcao);
 void imprimir_funcionario_resumido(const funcionario* f);
+//VOID IMPRIMIR ÁRVORE (OPÇÃO  MENU)
 
 // ============ FUNÇÕES DO SISTEMA RH ============
 

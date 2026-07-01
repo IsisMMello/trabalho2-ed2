@@ -447,7 +447,6 @@ void inicializarArvore(int ordem, int tamChave){
         Cabecalho arvore;
         arvore.raiz = -1;
         arvore.qtdPaginas = 0;
-        arvore.tamChave = tamChave;
         arvore.ordem = ordem; // podemos tirar isso e usar do define
         arvore.qtdPaginas = 0;
 
@@ -656,9 +655,6 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamCha
 
     fclose(arquivo);
 }
-
-//impressão
-void imprimirArvore();
 
 void deletarChaveNaArvore(const void *chave, int (*comparar)(const void *, const void *)){
     FILE *arquivo = fopen(arquivoArvore, "rb+");
