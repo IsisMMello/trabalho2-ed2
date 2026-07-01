@@ -328,7 +328,7 @@ void rh_excluir_funcionario() {
     strcpy(chaveMin.nome, nome);
     chaveMin.dataNascimento.dia = 1;
     chaveMin.dataNascimento.mes = 1;
-    chaveMin.dataNascimento.ano = 1;
+    chaveMin.dataNascimento.ano = 1000;
     
     strcpy(chaveMax.nome, nome);
     chaveMax.dataNascimento.dia = 31;
