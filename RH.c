@@ -115,7 +115,7 @@ int carregar_funcionario(funcionario* f, int posicao) {
 }
 
 //imprimir o funcionario
-void imprimir_funcionario(const funcionario* f) {
+void imprimir_funcionario(const funcionario* f,int opcao) {
     printf("\n========================================\n");
     printf("FICHA CADASTRAL\n");
     printf("========================================\n");
@@ -139,14 +139,15 @@ void imprimir_funcionario(const funcionario* f) {
                f->contrato.dataDesligamento.mes,
                f->contrato.dataDesligamento.ano);
     }
+    if(opcao == 1){
+        printf("Pagamentos: ");
+        printf("[ |");
+        for(int i = 0; i<11;i++){
+            printf("%lf | ", f->historicoPagamentos[i]);
 
-    printf("Pagamentos: ");
-    printf("[ |");
-    for(int i = 0; i<11;i++){
-        printf("%lf | ", f->historicoPagamentos[i]);
-
+        }
+        printf("]");
     }
-    printf("]");
     printf("========================================\n");
 }
 
@@ -261,7 +262,7 @@ void rh_inserir_funcionario() {
         if (carregar_funcionario(&f, posicao)) {
 
             printf("\nFuncionario ja cadastrado!\n");
-            imprimir_funcionario(&f);
+            imprimir_funcionario(&f,1);
 
             printf("\nDeseja atualizar os dados? (s/n): ");
 
@@ -335,7 +336,7 @@ void rh_inserir_funcionario() {
     inserirChaveNaArvore(&novo->chave, posicao, sizeof(chaveComposta), compararPorChaveComposta);
 
     printf("\nFuncionario cadastrado com sucesso!\n");
-    imprimir_funcionario_resumido(novo);
+    imprimir_funcionario(novo,1);
     free(novo);
 }
 
@@ -373,7 +374,7 @@ void rh_excluir_funcionario() {
 
     else if(qtd == 1) {
         if (carregar_funcionario(&f, posicoes[0])) {
-            imprimir_funcionario(&f);
+            imprimir_funcionario(&f,0);
             printf("Confirma a exclusao? (s/n): ");
             char resp;
             scanf(" %c", &resp);
@@ -405,7 +406,7 @@ void rh_excluir_funcionario() {
         for(int i = 0; i < qtd; i++) {
             if (carregar_funcionario(&f, posicoes[i])) {
                 printf("[%d] ", i+1);
-                imprimir_funcionario_resumido(&f);
+                imprimir_funcionario(&f,0);
             } else {
                 printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", 
                         i+1, posicoes[i]);
@@ -428,7 +429,7 @@ void rh_excluir_funcionario() {
         // CORRIGIDO: compararPorChaveComposta
         if (buscarChaveNaArvore(&chaveFuncionario, &posicaoFuncionario, compararPorChaveComposta) == 1) {
             if (carregar_funcionario(&f, posicaoFuncionario)) {
-                imprimir_funcionario(&f);
+                imprimir_funcionario(&f,0);
                 printf("Confirma a exclusao? (s/n): ");
                 char resp;
                 scanf(" %c", &resp);
@@ -495,7 +496,7 @@ void rh_buscar_funcionario() {
     
     else if (qtd == 1) {
         if (carregar_funcionario(&f, posicoes[0])) {
-            imprimir_funcionario(&f);
+            imprimir_funcionario(&f,1);
         } else {
             printf("ERRO: Nao foi possivel carregar o funcionario ");
         }
@@ -529,7 +530,7 @@ void rh_buscar_funcionario() {
             funcionario funcionarioImprimir;
             if (carregar_funcionario(&funcionarioImprimir, posicaoFuncionario)) {
                 printf("\n Dados do funcionario selecionado\n");
-                imprimir_funcionario(&funcionarioImprimir); 
+                imprimir_funcionario(&funcionarioImprimir,1); 
             } else {
                 printf("Erro ao carregar os dados do funcionario.\n");
             }
@@ -571,7 +572,7 @@ void rh_listar_intervalo() {
     posicoes = buscarChavesIntervalo(&chaveMin, &chaveMax, &qtd, compararPorChaveComposta);
 
     if(qtd == 0) {
-        printf("nenhum funcionario");
+        printf("Nenhum funcionario no intervalo.");
     } else {
         printf("\nTotal: %d funcionario(s) encontrados.\n", qtd);
         for (int i = 0; i < qtd; i++) {
@@ -579,7 +580,8 @@ void rh_listar_intervalo() {
             
             if (carregar_funcionario(&f, posicoes[i])) {
                 printf("[%d] ", i+1);
-                imprimir_funcionario_resumido(&f);
+                //PERGUNTAR PARA ELA
+                imprimir_funcionario(&f,1);
             } else {
                 printf("[%d] ERRO: Nao foi possivel carregar o funcionario da posicao %d\n", 
                        i+1, posicoes[i]);
