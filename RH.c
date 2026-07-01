@@ -142,7 +142,7 @@ void imprimir_funcionario(const funcionario* f,int opcao) {
     if(opcao == 1){
         printf("Pagamentos: ");
         printf("[ |");
-        for(int i = 0; i<11;i++){
+        for(int i = 0; i<12;i++){
             printf("%lf | ", f->historicoPagamentos[i]);
 
         }
@@ -213,8 +213,14 @@ void atualizar_funcionario(funcionario *f, int posicao){
     if(opcao == 's'|| opcao == 'S'){
         printf("Digite o mes do pagamento: (1 a 12) ");
         scanf("%d",&opcaoMes);
-        printf("Digite o valor do pagamento.");
-        scanf("%lf",&f->historicoPagamentos[opcaoMes-1]);
+    
+        if (opcaoMes >= 1 && opcaoMes <= 12) {
+            printf("Digite o valor do pagamento: ");
+            scanf("%lf", &f->historicoPagamentos[opcaoMes-1]);
+            limpar_buffer();
+        } else {
+            printf("Mes invalido! Operacao de pagamento cancelada.\n");
+        }
 
     }
 
@@ -234,8 +240,7 @@ void rh_inserir_funcionario() {
     data dataCont;
 
     int posicao;
-    // chaveComposta chave;   <-- REMOVIDA!
-
+  
     printf("\n========== INSERIR FUNCIONARIO ==========\n");
 
     // Nome
@@ -277,8 +282,7 @@ void rh_inserir_funcionario() {
             }
         }
         free(chave);
-    } else {
-        free(chave);
+        return;
     }
 
     // Dados da mãe
@@ -341,7 +345,7 @@ void rh_inserir_funcionario() {
     }
     memcpy(chaveCopia, &novo->chave, sizeof(chaveComposta));
 
-    // Insere a chave copiada na árvore B+
+ // Insere a chave original criada no início (evita múltiplos mallocs)
     inserirChaveNaArvore(chaveCopia, posicao, sizeof(chaveComposta), compararPorChaveComposta);
 
     printf("\nFuncionario cadastrado com sucesso!\n");
@@ -447,7 +451,7 @@ void rh_excluir_funcionario() {
 
         int posicaoFuncionario;
         
-        // CORRIGIDO: compararPorChaveComposta
+    
         if (buscarChaveNaArvore(chaveFuncionario, &posicaoFuncionario, compararPorChaveComposta) == 1) {
             if (carregar_funcionario(&f, posicaoFuncionario)) {
                 imprimir_funcionario(&f,0);
@@ -457,6 +461,7 @@ void rh_excluir_funcionario() {
                 getchar();
                 if (resp != 's' && resp != 'S') {
                     printf("Exclusao cancelada.\n");
+                    free(chaveFuncionario);
                     free(posicoes);
                     return;
                 }
@@ -470,15 +475,17 @@ void rh_excluir_funcionario() {
                 getchar();
                 
                 if (salvar_funcionario(&f, &posicaoFuncionario)) {
-                    // CORRIGIDO: compararPorChaveComposta
+                    
                     deletarChaveNaArvore(chaveFuncionario, compararPorChaveComposta);
                     printf("\n Funcionario removido com sucesso!\n");
                 } else {
                     printf("\n Erro ao remover funcionario.\n");
+                    free(chaveFuncionario);
                 }
             }
         } else {
             printf("Funcionario com a data informada nao encontrado.\n");
+            free(chaveFuncionario);
         }
         free(posicoes);
     }
