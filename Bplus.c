@@ -3,6 +3,108 @@
 #include <stdlib.h>
 static const char *arquivoArvore = "arvore.dat";
 
+//serialização
+void gravarPagina(FILE *arquivo, Pagina *pagina, const Cabecalho *cab){
+
+    char buffer[PAGE_SIZE] = {0};
+
+    int pos = 0;
+
+    memcpy(buffer + pos, &pagina->pai, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos, &pagina->indice, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos, &pagina->proximaFolha, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos, &pagina->qtElementos, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos, &pagina->ehfolha, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos, &pagina->foiDeletada, sizeof(int));
+    pos += sizeof(int);
+
+    memcpy(buffer + pos,
+           pagina->filho,
+           sizeof(int) * (ORDEM + 2));
+
+    pos += sizeof(int) * (ORDEM + 2);
+
+    // grava as chaves
+    for(int i=0;i<pagina->qtElementos;i++){
+
+        memcpy(buffer + pos,
+               pagina->chave[i],
+               cab->tamChave);
+
+        pos += cab->tamChave;
+    }
+
+    fseek(arquivo,
+          sizeof(Cabecalho) + pagina->indice * sizeof(buffer),
+          SEEK_SET);
+
+    fwrite(buffer, PAGE_SIZE, 1, arquivo);
+}
+
+void lerPagina(FILE *arquivo, Pagina *pagina, int indice, const Cabecalho *cab){
+
+    memset(pagina,0,sizeof(Pagina));
+
+    char buffer[PAGE_SIZE];
+
+    fseek(arquivo,
+          sizeof(Cabecalho) + indice * PAGE_SIZE,
+          SEEK_SET);
+
+    fread(buffer, PAGE_SIZE, 1, arquivo);
+
+
+    int pos = 0;
+
+
+    memcpy(&pagina->pai, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+    memcpy(&pagina->indice, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+    memcpy(&pagina->proximaFolha, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+    memcpy(&pagina->qtElementos, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+    memcpy(&pagina->ehfolha, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+    memcpy(&pagina->foiDeletada, buffer+pos,sizeof(int));
+    pos+=sizeof(int);
+
+
+    memcpy(pagina->filho,
+           buffer+pos,
+           sizeof(int)*(ORDEM+2));
+
+    pos+=sizeof(int)*(ORDEM+2);
+
+
+    for(int i=0;i<pagina->qtElementos;i++){
+
+        pagina->chave[i]=malloc(cab->tamChave);
+
+        memcpy(pagina->chave[i],
+               buffer+pos,
+               cab->tamChave);
+
+        pos+=cab->tamChave;
+    }
+}
+
 // funcões para a página
 //inicialização, criação, ordenação
 Pagina *criaPagina(){
@@ -71,19 +173,58 @@ void ordenarPaginaInterna(Pagina *p, int (*comparar)(const void *, const void *)
     }
 }
 //inserir verificarUnderflow AQUI PQ SE NAO DA AVISO
-void verificarUnderflow(FILE *arquivo, Pagina *pagina, int (*comparar)(const void*, const void*));
+void verificarUnderflow(FILE *arquivo, Pagina *pagina, int (*comparar)(const void*, const void*)){
 
+    Cabecalho header;
 
+    fseek(arquivo,0,SEEK_SET);
+    fread(&header,sizeof(Cabecalho),1,arquivo);
+
+    int minimo = ORDEM/2;
+
+    if(pagina->qtElementos >= minimo) return;
+
+    if(pagina->indice == header.raiz){
+        if(pagina->qtElementos == 0){
+
+            header.raiz = -1;
+            fseek(arquivo,0,SEEK_SET);
+            fwrite(&header,sizeof(Cabecalho),1,arquivo);
+        }
+
+        return;
+    }
+
+    Pagina pai;
+
+    lerPagina(arquivo,&pai,pagina->pai,&header);
+
+    int pos=0;
+
+    while(pai.filho[pos]!=pagina->indice)
+        pos++;
+
+    if(redistribuir(arquivo,pagina,&pai,pos,minimo,comparar)) return;
+
+    concatenar(arquivo,pagina,&pai,pos,comparar);
+
+}
 
 //inserção e remoção
-void inserirElementoNaPagina(Pagina *p, const void* chave, int indice, int (*comparar)(const void *, const void *)){
+void inserirElementoNaPagina(Pagina *p, const void *chave, size_t tamChave, int indice, int (*comparar)(const void *, const void *)){
 
     // Inserção na memória RAM mantendo o ponteiro genérico 
-    p->chave[p->qtElementos] = (void*)chave; 
+    void *novaChave = malloc(tamChave);
+
+    if (novaChave == NULL) return;
+
+    memcpy(novaChave, chave, tamChave);
+
+    p->chave[p->qtElementos] = novaChave;
     p->filho[p->qtElementos] = indice; // Em folhas, armazena o índice do registro; em internos, o índice do filho direito
     p->qtElementos++;
     
-    // Ordena a página na RAM
+    // Ordena a página
     if (p->ehfolha)
         ordenarPaginaFolha(p, comparar);
     else
@@ -92,14 +233,6 @@ void inserirElementoNaPagina(Pagina *p, const void* chave, int indice, int (*com
     // Verifica e trata o overflow (cisão) inteiramente na memória RAM
     verificarOverflow(p, comparar);
 
-    // Ao fim, salva as alterações necessárias no disco
-    FILE* arquivo = fopen(arquivoArvore, "r+b"); 
-    if (arquivo != NULL) {
-        // Salva a página atual (p) atualizada
-        fseek(arquivo, sizeof(Cabecalho) + p->indice * sizeof(Pagina), SEEK_SET); 
-        fwrite(p, sizeof(Pagina), 1, arquivo);
-        fclose(arquivo);
-    }
 }
 
 
@@ -138,18 +271,21 @@ int buscarPaginaLivre(){
 
     //abre o arquivoArvore pra leitura
     FILE *arquivo = fopen(arquivoArvore, "rb");
-    if (arquivo == NULL){
-        printf("Erro ao abrir o arquivoArvore!\n");
-        return -1;
-    }
-    //pula o cabecalho
-    fseek(arquivo, sizeof(Cabecalho), SEEK_SET);
+    if (arquivo == NULL) return -1;
+
     //le pagina a pagina até encontrar uma que foi deletada logicamente
+    Cabecalho header;
+    fread(&header,sizeof(Cabecalho),1,arquivo);
+
     Pagina p;
+
     int i = 0;
-    while(fread(&p, sizeof(Pagina), 1, arquivo)){
-        if (p.foiDeletada)
+
+    while(i < header.qtdPaginas){
+        lerPagina(arquivo, &p, i, &header);
+        if(p.foiDeletada)
             break;
+        liberarPagina(&p);
         i++;
     }
     //fecha o arquivoArvore
@@ -163,11 +299,15 @@ int redistribuir(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int minimo
 
     Pagina irma;
 
+    Cabecalho header;
+
+    fseek(arquivo,0,SEEK_SET);
+    fread(&header,sizeof(Cabecalho),1,arquivo);
+
     // irmã esquerda
     if (pos > 0){
 
-        fseek(arquivo, sizeof(Cabecalho) + pai->filho[pos-1]*sizeof(Pagina), SEEK_SET);
-        fread(&irma,sizeof(Pagina),1,arquivo);
+        lerPagina(arquivo, &irma, pai->filho[pos-1], &header);
 
         if(irma.qtElementos > minimo){
 
@@ -188,8 +328,8 @@ int redistribuir(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int minimo
 
             irma.qtElementos--;
 
-            fseek(arquivo, sizeof(Cabecalho)+irma.indice*sizeof(Pagina), SEEK_SET);
-            fwrite(&irma,sizeof(Pagina),1,arquivo);
+            gravarPagina(arquivo,&irma,&header);
+            gravarPagina(arquivo,pagina,&header);
 
             return 1;
         }
@@ -198,8 +338,7 @@ int redistribuir(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int minimo
     // irmã direita
     if(pos < pai->qtElementos){
 
-        fseek(arquivo, sizeof(Cabecalho)+pai->filho[pos+1]*sizeof(Pagina), SEEK_SET);
-        fread(&irma,sizeof(Pagina),1,arquivo);
+        lerPagina(arquivo, &irma, pai->filho[pos+1], &header);
 
         if(irma.qtElementos > minimo){
 
@@ -215,7 +354,8 @@ int redistribuir(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int minimo
             irma.qtElementos--;
 
             fseek(arquivo, sizeof(Cabecalho)+irma.indice*sizeof(Pagina), SEEK_SET);
-            fwrite(&irma,sizeof(Pagina),1,arquivo);
+            gravarPagina(arquivo,&irma,&header);
+            gravarPagina(arquivo,pagina,&header);
 
             return 1;
         }
@@ -230,8 +370,16 @@ void concatenar(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int (*compa
 
     if(pos > 0){
 
-        fseek(arquivo, sizeof(Cabecalho)+pai->filho[pos-1]*sizeof(Pagina), SEEK_SET);
-        fread(&irma,sizeof(Pagina),1,arquivo);
+        Cabecalho header;
+
+        fseek(arquivo,0,SEEK_SET);
+        fread(&header,sizeof(Cabecalho),1,arquivo);
+
+
+        lerPagina(arquivo,
+                &irma,
+                pai->filho[pos-1],
+                &header);
 
         for(int i=0;i<pagina->qtElementos;i++){
 
@@ -243,7 +391,7 @@ void concatenar(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int (*compa
         pagina->foiDeletada = 1;
 
         fseek(arquivo, sizeof(Cabecalho)+irma.indice*sizeof(Pagina), SEEK_SET);
-        fwrite(&irma,sizeof(Pagina),1,arquivo);
+        gravarPagina(arquivo,&irma,&header);
 
         // remove referência no pai
         for(int i=pos;i<pai->qtElementos;i++){
@@ -251,50 +399,9 @@ void concatenar(FILE *arquivo, Pagina *pagina, Pagina *pai, int pos, int (*compa
         }
 
         pai->qtElementos--;
-
+        gravarPagina(arquivo,pai,&header);
         verificarUnderflow(arquivo,pai,comparar);
     }
-}
-
-void verificarUnderflow(FILE *arquivo, Pagina *pagina, int (*comparar)(const void*, const void*)){
-
-    Cabecalho header;
-
-    fseek(arquivo,0,SEEK_SET);
-    fread(&header,sizeof(Cabecalho),1,arquivo);
-
-    int minimo = ORDEM/2;
-
-    if(pagina->qtElementos >= minimo)
-        return;
-
-    if(pagina->indice == header.raiz){
-
-        if(pagina->qtElementos == 0){
-
-            header.raiz = -1;
-
-            fseek(arquivo,0,SEEK_SET);
-            fwrite(&header,sizeof(Cabecalho),1,arquivo);
-        }
-
-        return;
-    }
-
-    Pagina pai;
-
-    fseek(arquivo, sizeof(Cabecalho)+pagina->pai*sizeof(Pagina), SEEK_SET);
-    fread(&pai,sizeof(Pagina),1,arquivo);
-
-    int pos=0;
-
-    while(pai.filho[pos]!=pagina->indice)
-        pos++;
-
-    if(redistribuir(arquivo,pagina,&pai,pos,minimo,comparar))
-        return;
-
-    concatenar(arquivo,pagina,&pai,pos,comparar);
 }
 
 void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
@@ -349,11 +456,13 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
     if (!p->ehfolha) {
         for (int i = 0; i <= novaPagina->qtElementos; i++) {
             Pagina filhoTemp;
-            fseek(arquivo, sizeof(Cabecalho) + novaPagina->filho[i] * sizeof(Pagina), SEEK_SET);
-            fread(&filhoTemp, sizeof(Pagina), 1, arquivo);
+
+            lerPagina(arquivo, &filhoTemp, novaPagina->filho[i], &header);
             filhoTemp.pai = novaPagina->indice;
-            fseek(arquivo, sizeof(Cabecalho) + novaPagina->filho[i] * sizeof(Pagina), SEEK_SET);
-            fwrite(&filhoTemp, sizeof(Pagina), 1, arquivo);
+
+            gravarPagina(arquivo, &filhoTemp, &header);
+
+            liberarPagina(&filhoTemp);
         }
     }
 
@@ -377,12 +486,14 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
         // escreve a nova raiz no arquivo
         if (arquivo != NULL) {
             header.raiz = novaRaiz->indice;
-            header.qtdPaginas += 2; 
-            fseek(arquivo, 0, SEEK_SET);
-            fwrite(&header, sizeof(Cabecalho), 1, arquivo);
+            header.qtdPaginas += 2;
 
-            fseek(arquivo, sizeof(Cabecalho) + novaRaiz->indice * sizeof(Pagina), SEEK_SET);
-            fwrite(novaRaiz, sizeof(Pagina), 1, arquivo);
+            fseek(arquivo,0,SEEK_SET);
+            fwrite(&header,sizeof(Cabecalho),1,arquivo);
+
+            gravarPagina(arquivo,p,&header);
+            gravarPagina(arquivo,novaRaiz,&header);
+
             fclose(arquivo);
         }
 
@@ -393,8 +504,7 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
         Pagina *pai = criaPagina();
         arquivo = fopen(arquivoArvore, "r+b");
         if (arquivo != NULL) {
-            fseek(arquivo, sizeof(Cabecalho) + p->pai * sizeof(Pagina), SEEK_SET);
-            fread(pai, sizeof(Pagina), 1, arquivo);
+            lerPagina(arquivo, pai,p->pai,&header);
             
             header.qtdPaginas++;
             fseek(arquivo, 0, SEEK_SET);
@@ -403,16 +513,14 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
         }
 
         // propaga a chave mediana para o pai, e faz a cisão caso nescessário
-        inserirElementoNaPagina(pai, chaveMediana, novaPagina->indice, comparar);
-        
+        inserirElementoNaPagina(pai, chaveMediana, header.tamChave, novaPagina->indice, comparar);
         free(pai); 
     }
 
     arquivo = fopen(arquivoArvore, "r+b");
     // escreve a página irmã no arquivo
     if (arquivo != NULL) {
-        fseek(arquivo, sizeof(Cabecalho) + novaPagina->indice * sizeof(Pagina), SEEK_SET);
-        fwrite(novaPagina, sizeof(Pagina), 1, arquivo);
+        gravarPagina(arquivo,novaPagina,&header);
         fclose(arquivo);
     }
     
@@ -421,40 +529,39 @@ void verificarOverflow(Pagina *p, int (*comparar)(const void *, const void *)){
 
 //delete
 void destroiPagina(Pagina *p){ 
+
+    FILE* fp = fopen(arquivoArvore,"r+b");
+
+    if(fp == NULL) return;
+
+    Cabecalho header;
+
+    fread(&header,sizeof(Cabecalho),1,fp);
+
     p->foiDeletada = 1;
     p->qtElementos = 0;
-    
-    FILE* fp = fopen(arquivoArvore, "r+b"); // r+b permite escrita sem apagar o arquivoArvore
-    if (fp != NULL) {
-        fseek(fp, sizeof(Cabecalho) + p->indice * sizeof(Pagina), SEEK_SET);
-        fwrite(p, sizeof(Pagina), 1, fp);
-    }
-    
-    // agora que está salvo no disco, removemos da memória RAM
-    free(p);
-    // ajusta o cabecaho da arvore
-    Cabecalho header;
-    fseek(fp, 0, SEEK_SET);
-    fread(&header, sizeof(Cabecalho), 1, fp);
-    header.qtdPaginas --;
-    fwrite(&header, sizeof(Cabecalho), 1, fp);
+
+    gravarPagina(fp,p,&header);
+
     fclose(fp);
 
+    liberarPagina(p);
+    free(p);
 }
 
 //funções para a árvore
 //inicialização, criação, ordenação
 void inicializarArvore(int ordem, int tamChave){
-    
+
     FILE *arquivo = fopen(arquivoArvore, "rb+");
-    // Confere se arquivoArvore  da árvore já não foi criado
-    if (arquivo == NULL)
-    {
+
+    if (arquivo == NULL){
         Cabecalho arvore;
+
         arvore.raiz = -1;
         arvore.qtdPaginas = 0;
-        arvore.ordem = ordem; // podemos tirar isso e usar do define
-        arvore.qtdPaginas = 0;
+        arvore.ordem = ordem;
+        arvore.tamChave = tamChave;
 
         FILE *novoArquivo = fopen(arquivoArvore, "wb+");
         fwrite(&arvore, sizeof(Cabecalho), 1, novoArquivo);
@@ -475,20 +582,19 @@ Pagina buscarFolha(Cabecalho *header, const void *chave, int (*comparar)(const v
     Pagina pagina;
 
     //Carrega a raiz
-    fseek(arquivo, sizeof(Cabecalho) + header->raiz * sizeof(Pagina), SEEK_SET);
-    fread(&pagina, sizeof(Pagina), 1, arquivo);
+    lerPagina(arquivo,&pagina,header->raiz,header);
 
     // Enquanto não chegar em uma folha
     while (pagina.ehfolha == 0){
         int i = 0;
 
         // Descobre qual filho seguir
-        while (i < pagina.qtElementos && comparar(chave, &pagina.chave[i]) > 0) i++;
-        
+        while (i < pagina.qtElementos && comparar(chave, &pagina.chave[i]) > 0) 
+            i++;
         // Carrega o filho escolhido
-        fseek(arquivo, sizeof(Cabecalho) + pagina.filho[i] * sizeof(Pagina), SEEK_SET);
-        fread(&pagina, sizeof(Pagina), 1, arquivo);
-    }   
+        lerPagina(arquivo,&pagina,pagina.filho[i],header);
+    }
+    fclose(arquivo);  
     return pagina;
 }
 
@@ -606,10 +712,10 @@ int* buscarChavesIntervalo(const void *chaveMin, const void *chaveMax, int *qtEn
             break;
 
         // carrega a próxima folha
-        fseek(arquivo, sizeof(Cabecalho) + pagina.proximaFolha * sizeof(Pagina), SEEK_SET);
-        fread(&pagina, sizeof(Pagina), 1, arquivo);
+        liberarPagina(&pagina);
+        lerPagina(arquivo,&pagina,pagina.proximaFolha,&header);
     }
-
+    liberarPagina(&pagina);
     fclose(arquivo);
 
     return enderecos;
@@ -639,7 +745,10 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamCha
         Pagina *novaRaiz = criaPagina();
         inicializarPagina(novaRaiz, 0, 1); // 1 indica que é folha
 
-        novaRaiz->chave[0] = (void*)chave;
+        void *novaChave = malloc(tamChave);
+        memcpy(novaChave, chave, tamChave);
+        novaRaiz->chave[novaRaiz->qtElementos] = novaChave;
+
         novaRaiz->filho[0] = enderecoRegistro;
         novaRaiz->qtElementos = 1;
 
@@ -649,16 +758,18 @@ void inserirChaveNaArvore(const void *chave, int enderecoRegistro, size_t tamCha
         fseek(arquivo, 0, SEEK_SET);
         fwrite(&header, sizeof(Cabecalho), 1, arquivo);
 
-        fseek(arquivo, sizeof(Cabecalho), SEEK_SET);
-        fwrite(novaRaiz, sizeof(Pagina), 1, arquivo);
-
+        gravarPagina(arquivo,novaRaiz,&header);
+        liberarPagina(novaRaiz);
         free(novaRaiz);
     }
     else{
         //caso a árvore não esteja vazia
         Pagina p = buscarFolha(&header, chave, comparar);
+        inserirElementoNaPagina(&p, chave, tamChave, enderecoRegistro, comparar);
 
-        inserirElementoNaPagina(&p, chave, enderecoRegistro, comparar);
+        // grava a página modificada
+        gravarPagina(arquivo,&p,&header);
+        liberarPagina(&p);
     }
 
     fclose(arquivo);
@@ -694,15 +805,19 @@ void deletarChaveNaArvore(const void *chave, int (*comparar)(const void *, const
         fclose(arquivo);
         return;
     }
-    //libera chave (tratamento de erro)
-    free((void*)chave);
 
     // corrige underflow (pode modificar outras páginas recursivamente)
     verificarUnderflow(arquivo, &pagina, comparar);
 
     // salva a página onde ocorreu a remoção
-    fseek(arquivo, sizeof(Cabecalho) + pagina.indice * sizeof(Pagina), SEEK_SET);
-    fwrite(&pagina, sizeof(Pagina), 1, arquivo);
+    gravarPagina(arquivo,&pagina,&header);
 
     fclose(arquivo);
+}
+
+void liberarPagina(Pagina *pagina){
+    for (int i = 0; i < pagina->qtElementos; i++) {
+        free(pagina->chave[i]);
+        pagina->chave[i] = NULL;
+    }
 }

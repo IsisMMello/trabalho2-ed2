@@ -1,17 +1,20 @@
 #ifndef Bplus_H
 
-#define ORDEM 4
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stddef.h>
+#include <string.h>
 
-/* ============================================================
-   Estruturas e constantes
-   ============================================================ */
+#define ORDEM 4
+#define PAGE_SIZE 4096
+
+//Estruturas e constantes
 
 typedef struct {
-    int ordem, qtdPaginas, raiz; //raiz recebe -1 na criação do cabeçalho == VAZIA
+    int ordem;          // ordem da árvore
+    int qtdPaginas;     // quantidade de páginas existentes
+    int raiz;           // índice da raiz (-1 = árvore vazia)
+    size_t tamChave;    // tamanho, em bytes, de cada chave
 } Cabecalho;
 
 typedef struct Pagina{
@@ -42,6 +45,19 @@ int buscarPaginaLivre();
 void destroiPagina(Pagina *p);
 
 /* ============================================================
+   CATEGORIA 1.1: Serialização de páginas
+   ============================================================ */
+
+// Grava uma página em disco utilizando serialização manual
+void gravarPagina(FILE *arquivo, Pagina *pagina, const Cabecalho *cab);
+
+// Lê uma página do disco reconstruindo suas estruturas em memória
+void lerPagina(FILE *arquivo, Pagina *pagina, int indice, const Cabecalho *cab);
+
+// Libera a memória alocada para as chaves de uma página
+void liberarPagina(Pagina *pagina);
+
+/* ============================================================
    CATEGORIA 2: Ordenação e manipulação de elementos na página
    ============================================================ */
 
@@ -52,7 +68,7 @@ void ordenarPaginaFolha(Pagina *p, int (*comparar)(const void *, const void *));
 void ordenarPaginaInterna(Pagina *p, int (*comparar)(const void *, const void *));
 
 // Insere uma chave e seu índice (registro/filho) na página, mantendo ordem e tratando overflow
-void inserirElementoNaPagina(Pagina *p, const void* chave, int indice, int (*comparar)(const void *, const void *));
+void inserirElementoNaPagina(Pagina *p, const void *chave, size_t tamChave, int indice, int (*comparar)(const void *, const void *));
 
 // Remove uma chave da página e reorganiza os elementos (retorna 0 se não encontrada, ou outro valor)
 int removerElementoDaPagina(Pagina *p, const void *chave, int (*comparar)(const void*, const void*));
