@@ -71,47 +71,89 @@ int compararPorChaveComposta(const void*a, const void*b){
 int salvar_funcionario(const funcionario *f, int *posicao)
 {
     FILE *arquivo;
+    // O tamanho total da soma dos campos sem padding é 738 bytes
+    const size_t TAMANHO_REGISTRO_DISCO = 738; 
+    
+    // Cria um buffer (um array de bytes) na RAM para montar o registro
+    unsigned char buffer[738];
+    size_t offset = 0; // Controla onde estamos colando no buffer
 
+    // --- COLA CAMPO POR CAMPO NO BUFFER USANDO MEMCPY ---
+    memcpy(buffer + offset, f->chave.nome, 100);
+    offset += 100;
+
+    memcpy(buffer + offset, &f->chave.dataNascimento, sizeof(data));
+    offset += sizeof(data);
+    
+    memcpy(buffer + offset, f->filiacao.mae, 100);
+    offset += 100;
+    
+    memcpy(buffer + offset, f->filiacao.pai, 100);
+    offset += 100;
+    
+    memcpy(buffer + offset, f->contato.endereco, 200);
+    offset += 200;
+    
+    memcpy(buffer + offset, f->contato.telefone, 20);
+    offset += 20;
+    
+    memcpy(buffer + offset, f->historicoPagamentos, sizeof(double) * 12);
+    offset += sizeof(double) * 12;
+    
+    memcpy(buffer + offset, &f->contrato, sizeof(dadosContratuais));
+    // offset += sizeof(dadosContratuais); // Último campo, não precisa somar mais
+
+    // --- PARTE DA GRAVAÇÃO NO ARQUIVO ---
     if (*posicao == -1) {
-
         arquivo = fopen("funcionarios.dat", "a+b");
-
-        if (arquivo == NULL)
-            return 0;
+        if (arquivo == NULL) return 0;
 
         fseek(arquivo, 0, SEEK_END);
         long tamanho = ftell(arquivo);
-        *posicao = tamanho / sizeof(funcionario);
+        *posicao = tamanho / TAMANHO_REGISTRO_DISCO;
     }
     else {
         arquivo = fopen("funcionarios.dat", "rb+");
+        if (arquivo == NULL) return 0;
 
-        if (arquivo == NULL)
-            return 0;
-
-        fseek(arquivo, (*posicao) * sizeof(funcionario), SEEK_SET);
+        fseek(arquivo, (*posicao) * TAMANHO_REGISTRO_DISCO, SEEK_SET);
     }
 
-    int ok = fwrite(f, sizeof(funcionario), 1, arquivo);
-
+    // Grava o buffer compacto de uma vez só no arquivo
+    int ok = fwrite(buffer, TAMANHO_REGISTRO_DISCO, 1, arquivo);
     fclose(arquivo);
 
     return ok == 1;
 }
-
 //manda o arquivo para a memoria
 
 int carregar_funcionario(funcionario* f, int posicao) {
     FILE* arquivo = fopen("funcionarios.dat", "rb");
-    if (arquivo == NULL) {
+    if (arquivo == NULL) 
         return 0;
-    }
     
-    fseek(arquivo, posicao * sizeof(funcionario), SEEK_SET);
-    size_t lido = fread(f, sizeof(funcionario), 1, arquivo);
+    const size_t TAMANHO_REGISTRO_DISCO = 738;
+    fseek(arquivo, posicao * TAMANHO_REGISTRO_DISCO, SEEK_SET);
+    
+    // --- LÊ CAMPO A CAMPO ---
+    size_t itensLidos = 0;
+    
+    itensLidos += fread(f->chave.nome, sizeof(char), 100, arquivo);
+    itensLidos += fread(&f->chave.dataNascimento, sizeof(data), 1, arquivo);
+    
+    itensLidos += fread(f->filiacao.mae, sizeof(char), 100, arquivo);
+    itensLidos += fread(f->filiacao.pai, sizeof(char), 100, arquivo);
+    
+    itensLidos += fread(f->contato.endereco, sizeof(char), 200, arquivo);
+    itensLidos += fread(f->contato.telefone, sizeof(char), 20, arquivo);
+    
+    itensLidos += fread(f->historicoPagamentos, sizeof(double), 12, arquivo);
+    itensLidos += fread(&f->contrato, sizeof(dadosContratuais), 1, arquivo);
+    
     fclose(arquivo);
     
-    return (lido == 1);
+    // Se leu todos os blocos com sucesso (8 blocos no total)
+    return (itensLidos == 247); // 100+1+100+100+200+20+12+1 = total de leituras individuais bem-sucedidas
 }
 
 //imprimir o funcionario
@@ -597,4 +639,84 @@ void rh_listar_intervalo() {
 
 
 //IMPRIMIR ARVORE 
-void imprimirArvore();
+//IMPRIMIR ARVORE 
+void imprimirArvore(){  
+    printf("\n========================================\n");
+    printf("  ESTRUTURA DA ÁRVORE B+\n");
+    printf("========================================\n");
+
+    FILE *arquivo = fopen(arquivoArvore, "rb");
+    if (arquivo == NULL) 
+        return;
+
+    // Lê o cabeçalho para encontrar a raiz
+    Cabecalho header;
+    fseek(arquivo, 0, SEEK_SET);
+    if (fread(&header, sizeof(Cabecalho), 1, arquivo) != 1) {
+        fclose(arquivo);
+        return;
+    }
+
+    // Dispara a impressão a partir da raiz no nível 0
+    imprimirArvoreRecursivo(arquivo, header.raiz, 0);
+
+    fclose(arquivo);
+
+    printf("========================================\n");
+}
+
+void imprimirArvoreRecursivo(FILE *arquivo, int indicePagina, int nivel) {
+    if (indicePagina == -1) return;
+
+    // Aloca e carrega a página atual do disco
+    Pagina *p = criaPagina();
+    fseek(arquivo, sizeof(Cabecalho) + indicePagina * sizeof(Pagina), SEEK_SET);
+    if (fread(p, sizeof(Pagina), 1, arquivo) != 1) {
+        free(p);
+        return;
+    }
+
+    // Define a identação para organização
+    char indentacao[100] = "";
+    for (int i = 0; i < nivel; i++) {
+        strcat(indentacao, "    "); 
+    }
+
+    // Percorre e exibe as informações
+    for (int i = 0; i < p->qtElementos; i++) {
+        // Cast do ponteiro genérico para o tipo correto de chave do RH
+        chaveComposta *chave = (chaveComposta*)p->chave[i];
+        
+        // Extrai o primeiro nome isolando a string até o primeiro espaço
+        char primeiroNome[100];
+        if (sscanf(chave->nome, "%s", primeiroNome) != 1) {
+            strcpy(primeiroNome, chave->nome);
+        }
+
+        printf("%s%s (%02d/%02d/%04d)\n", indentacao,primeiroNome,chave->dataNascimento.dia,chave->dataNascimento.mes,chave->dataNascimento.ano);
+    }
+
+    // Se não for folha, desce recursivamente para os filhos incrementando o nível visual
+    if (!p->ehfolha) {
+        for (int i = 0; i <= p->qtElementos; i++) {
+            imprimirArvoreRecursivo(arquivo, p->filho[i], nivel + 1);
+        }
+    }
+
+    free(p); // Libera a memória RAM da página
+}
+
+// Diz à árvore quantos bytes a sua chave ocupa
+size_t rh_tamanho_chave(const void* chave) {
+    return sizeof(chaveComposta);
+}
+
+// Copia a struct chaveComposta do RH para o buffer da página
+void rh_escrever_chave(const void* chave, void* buffer) {
+    memcpy(buffer, chave, sizeof(chaveComposta));
+}
+
+// Puxa os bytes da página e joga de volta em uma struct do RH
+void rh_ler_chave(void* destino, const void* buffer) {
+    memcpy(destino, buffer, sizeof(chaveComposta));
+}

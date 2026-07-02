@@ -7,6 +7,8 @@
 
 #define ORDEM 4
 #define PAGE_SIZE 4096
+static const char *arquivoArvore = "arvore.dat";
+
 
 //Estruturas e constantes
 

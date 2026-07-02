@@ -1,7 +1,6 @@
 #include "Bplus.h"
 #include <stdio.h>
 #include <stdlib.h>
-static const char *arquivoArvore = "arvore.dat";
 
 //serialização
 void gravarPagina(FILE *arquivo, Pagina *pagina, const Cabecalho *cab){
