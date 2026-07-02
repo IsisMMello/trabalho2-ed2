@@ -639,32 +639,6 @@ void rh_listar_intervalo() {
 
 
 //IMPRIMIR ARVORE 
-//IMPRIMIR ARVORE 
-void imprimirArvore(){  
-    printf("\n========================================\n");
-    printf("  ESTRUTURA DA ÁRVORE B+\n");
-    printf("========================================\n");
-
-    FILE *arquivo = fopen(arquivoArvore, "rb");
-    if (arquivo == NULL) 
-        return;
-
-    // Lê o cabeçalho para encontrar a raiz
-    Cabecalho header;
-    fseek(arquivo, 0, SEEK_SET);
-    if (fread(&header, sizeof(Cabecalho), 1, arquivo) != 1) {
-        fclose(arquivo);
-        return;
-    }
-
-    // Dispara a impressão a partir da raiz no nível 0
-    imprimirArvoreRecursivo(arquivo, header.raiz, 0);
-
-    fclose(arquivo);
-
-    printf("========================================\n");
-}
-
 void imprimirArvoreRecursivo(FILE *arquivo, int indicePagina, int nivel) {
     if (indicePagina == -1) return;
 
@@ -704,6 +678,31 @@ void imprimirArvoreRecursivo(FILE *arquivo, int indicePagina, int nivel) {
     }
 
     free(p); // Libera a memória RAM da página
+}
+
+void imprimirArvore(){  
+    printf("\n========================================\n");
+    printf("  ESTRUTURA DA ÁRVORE B+\n");
+    printf("========================================\n");
+
+    FILE *arquivo = fopen(arquivoArvore, "rb");
+    if (arquivo == NULL) 
+        return;
+
+    // Lê o cabeçalho para encontrar a raiz
+    Cabecalho header;
+    fseek(arquivo, 0, SEEK_SET);
+    if (fread(&header, sizeof(Cabecalho), 1, arquivo) != 1) {
+        fclose(arquivo);
+        return;
+    }
+
+    // Dispara a impressão a partir da raiz no nível 0
+    imprimirArvoreRecursivo(arquivo, header.raiz, 0);
+
+    fclose(arquivo);
+
+    printf("========================================\n");
 }
 
 // Diz à árvore quantos bytes a sua chave ocupa

@@ -54,7 +54,7 @@ int main(){
                 rh_listar_intervalo();
                 break;
             case 5:
-                //imprimirArvore();
+                imprimirArvore();
                 break;
 
             case 6:
